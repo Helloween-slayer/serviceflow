@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use App\Models\Order;
 use App\Models\Tag;
+use App\Services\OrderService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -15,69 +15,52 @@ class OrderController extends Controller
      */
     public function index()
     {
-        $orders = Order::where('status', 'new')->whereNull('worker_id')->with('tags', 'client')->paginate(10);
+        $orders = OrderService::getAvailableOrders();
         return Inertia::render('Orders/Index', ['orders' => $orders]);
     }
 
     /**
-     * Мої заявки — тільки заявки поточного клієнта.
+     * Заявки поточного клієнта.
      */
-    public function clientOrders(Request $request)
+    public function clientOrders(Request $request, OrderService $service)
     {
-        $query = Order::where('client_id', auth()->id())->with('tags');
-
-        if ($request->status === 'completed') {
-            $query->whereIn('status', ['completed', 'cancelled']);
-        } else {
-            $query->whereNotIn('status', ['completed', 'cancelled']);
-        }
-
-        $orders = $query->paginate(10);
-        return Inertia::render('Client/Orders/Index', ['orders' => $orders, 'activeTab' => $request->status ?? 'active']);
+        $orders = $service->getClientOrders(auth()->id(), $request->status);
+        return Inertia::render('Client/Orders/Index', [
+            'orders' => $orders,
+            'activeTab' => $request->status ?? 'active'
+        ]);
     }
 
     /**
-     * Мої заявки (для виконавця) — заявки, які взяв поточний воркер.
+     * Заявки поточного воркера.
      */
-    public function myWorkerOrders(Request $request)
+    public function workerOrders(Request $request, OrderService $service)
     {
-        $query = Order::where('worker_id', auth()->id())->with('tags', 'client');
-
-        if ($request->status === 'completed') {
-            $query->whereIn('status', ['completed', 'ready']);
-        } else {
-            $query->whereIn('status', ['in_progress', 'new']);
-        }
-
-        $orders = $query->paginate(10);
+        $orders = $service->getWorkerOrders(auth()->id(), $request->status);
         return Inertia::render('Worker/Orders/Index', [
             'orders' => $orders,
             'activeTab' => $request->status ?? 'active'
         ]);
     }
 
+    /**
+     * Адмін-дашборд: статистика та останні заявки.
+     */
+    public function adminDashboard(OrderService $service)
+    {
+        return Inertia::render('Admin/Dashboard', [
+            'stats' => $service->getStats(),
+            'recentOrders' => $service->getRecentOrders(),
+        ]);
+    }
 
     /**
-     * Всі заявки для адміна (повний список, без фільтрів).
+     * Адмін: список всіх заявок.
      */
-    public function adminDashboard()
+    public function adminOrders(OrderService $service)
     {
-        $stats = [
-            'totalOrders' => Order::count(),
-            'activeOrders' => Order::whereIn('status', ['new', 'in_progress'])->count(),
-            'completedOrders' => Order::whereIn('status', ['completed', 'ready'])->count(),
-            'totalUsers' => User::count(),
-        ];
-
-        $recentOrders = Order::with('client')
-            ->latest()
-            ->limit(10)
-            ->get();
-
-        return Inertia::render('Admin/Dashboard', [
-            'stats' => $stats,
-            'recentOrders' => $recentOrders,
-        ]);
+        $orders = $service->getAllOrders();
+        return Inertia::render('Admin/Orders/Index', ['orders' => $orders]);
     }
 
     /**
@@ -85,7 +68,6 @@ class OrderController extends Controller
      */
     public function takeOrder(Order $order)
     {
-        // Перевіряємо, що заявка доступна
         if ($order->status !== 'new' || $order->worker_id !== null) {
             return redirect()->back()->with('error', 'Ця заявка вже не доступна.');
         }
@@ -138,7 +120,7 @@ class OrderController extends Controller
     }
 
     /**
-     * Перегляд однієї заявки.
+     * Перегляд однієї заявки (публічний).
      */
     public function show(Order $order)
     {
@@ -147,11 +129,10 @@ class OrderController extends Controller
     }
 
     /**
-     * Форма редагування заявки.
+     * Форма редагування заявки (клієнт).
      */
     public function edit(Order $order)
     {
-        // $this->authorize('update', $order);
         $tags = Tag::all();
         return Inertia::render('Client/Orders/Edit', [
             'order' => $order->load('tags'),
@@ -160,12 +141,10 @@ class OrderController extends Controller
     }
 
     /**
-     * Оновлення заявки.
+     * Оновлення заявки (клієнт).
      */
     public function update(Request $request, Order $order)
     {
-        // $this->authorize('update', $order);
-
         $data = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -193,12 +172,12 @@ class OrderController extends Controller
     {
         try {
             $order->delete();
-
-            return redirect()->route('orders.index')
-                ->with('success', 'Заявку успішно видалено');
+            return redirect()->route('orders.index')->with('success', 'Заявку успішно видалено');
         } catch (\Exception $e) {
+            \Log::error('Помилка видалення заявки ID: ' . $order->id . ' - ' . $e->getMessage());
+
             return back()->withErrors([
-                'error' => 'Не вдалося видалити заявку: ' . $e->getMessage()
+                'error' => 'Не вдалося видалити заявку. Спробуйте пізніше.'
             ]);
         }
     }

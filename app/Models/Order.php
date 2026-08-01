@@ -21,6 +21,22 @@ class Order extends Model
         'deadline'
     ];
 
+    const STATUS_NEW = 'new';
+    const STATUS_IN_PROGRESS = 'in_progress';
+    const STATUS_READY = 'ready';
+    const STATUS_COMPLETED = 'completed';
+    const STATUS_CANCELLED = 'cancelled';
+
+    public static function activeStatuses(): array
+    {
+        return [self::STATUS_NEW, self::STATUS_IN_PROGRESS];
+    }
+
+    public static function completedStatuses(): array
+    {
+        return [self::STATUS_COMPLETED, self::STATUS_READY];
+    }
+
     public function client()
     {
         return $this->belongsTo(User::class, 'client_id');
