@@ -13,9 +13,7 @@ const showingNavigationDropdown = ref(false);
 <template>
     <div>
         <div class="min-h-screen bg-gray-100">
-            <nav
-                class="border-b border-gray-100 bg-white"
-            >
+            <nav class="border-b border-gray-100 bg-white">
                 <!-- Primary Navigation Menu -->
                 <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div class="flex h-16 justify-between">
@@ -29,21 +27,49 @@ const showingNavigationDropdown = ref(false);
                                 </Link>
                             </div>
 
-                            <!-- Navigation Links -->
-                            <div
-                                class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex"
-                            >
+                            <!-- ========================================== -->
+                            <!-- 👇 ДЕСКТОПНОЕ МЕНЮ (для больших экранов)   -->
+                            <!-- ========================================== -->
+                            <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                                <!-- Главная (для всех) -->
                                 <NavLink
                                     :href="route('dashboard')"
                                     :active="route().current('dashboard')"
                                 >
-                                    Dashboard
+                                    Головна
+                                </NavLink>
+
+                                <!-- 👇 ДЛЯ АДМИНА (role_id = 1) -->
+                                <NavLink
+                                    v-if="$page.props.auth.user.role_id === 1"
+                                    :href="route('admin.dashboard')"
+                                    :active="route().current('admin.dashboard')"
+                                >
+                                    ⚙️ Адмін-панель
+                                </NavLink>
+
+                                <!-- 👇 ДЛЯ КЛИЕНТА (role_id = 3) -->
+                                <NavLink
+                                    v-if="$page.props.auth.user.role_id === 3"
+                                    :href="route('client.orders.index')"
+                                    :active="route().current('client.orders.index')"
+                                >
+                                    Мої заявки
+                                </NavLink>
+
+                                <!-- 👇 ДЛЯ ВОРКЕРА (role_id = 2) -->
+                                <NavLink
+                                    v-if="$page.props.auth.user.role_id === 2"
+                                    :href="route('worker.orders.index')"
+                                    :active="route().current('worker.orders.index')"
+                                >
+                                    Заявки в роботі
                                 </NavLink>
                             </div>
                         </div>
 
+                        <!-- Настройки пользователя (аватар, выпадающее меню) -->
                         <div class="hidden sm:ms-6 sm:flex sm:items-center">
-                            <!-- Settings Dropdown -->
                             <div class="relative ms-3">
                                 <Dropdown align="right" width="48">
                                     <template #trigger>
@@ -71,24 +97,22 @@ const showingNavigationDropdown = ref(false);
                                     </template>
 
                                     <template #content>
-                                        <DropdownLink
-                                            :href="route('profile.edit')"
-                                        >
-                                            Profile
+                                        <DropdownLink :href="route('profile.edit')">
+                                            Профіль
                                         </DropdownLink>
                                         <DropdownLink
                                             :href="route('logout')"
                                             method="post"
                                             as="button"
                                         >
-                                            Log Out
+                                            Вийти
                                         </DropdownLink>
                                     </template>
                                 </Dropdown>
                             </div>
                         </div>
 
-                        <!-- Hamburger -->
+                        <!-- Бургер-меню (для мобильных) -->
                         <div class="-me-2 flex items-center sm:hidden">
                             <button
                                 @click="
@@ -131,7 +155,9 @@ const showingNavigationDropdown = ref(false);
                     </div>
                 </div>
 
-                <!-- Responsive Navigation Menu -->
+                <!-- ========================================== -->
+                <!-- 👇 МОБИЛЬНОЕ МЕНЮ (бургер)                -->
+                <!-- ========================================== -->
                 <div
                     :class="{
                         block: showingNavigationDropdown,
@@ -140,22 +166,46 @@ const showingNavigationDropdown = ref(false);
                     class="sm:hidden"
                 >
                     <div class="space-y-1 pb-3 pt-2">
+                        <!-- Главная (для всех) -->
                         <ResponsiveNavLink
                             :href="route('dashboard')"
                             :active="route().current('dashboard')"
                         >
-                            Dashboard
+                            Головна
+                        </ResponsiveNavLink>
+
+                        <!-- 👇 ДЛЯ АДМИНА (role_id = 1) -->
+                        <ResponsiveNavLink
+                            v-if="$page.props.auth.user.role_id === 1"
+                            :href="route('admin.dashboard')"
+                            :active="route().current('admin.dashboard')"
+                        >
+                            ⚙️ Адмін-панель
+                        </ResponsiveNavLink>
+
+                        <!-- 👇 ДЛЯ КЛИЕНТА (role_id = 3) -->
+                        <ResponsiveNavLink
+                            v-if="$page.props.auth.user.role_id === 3"
+                            :href="route('client.orders.index')"
+                            :active="route().current('client.orders.index')"
+                        >
+                            Мої заявки
+                        </ResponsiveNavLink>
+
+                        <!-- 👇 ДЛЯ ВОРКЕРА (role_id = 2) -->
+                        <ResponsiveNavLink
+                            v-if="$page.props.auth.user.role_id === 2"
+                            :href="route('worker.orders.index')"
+                            :active="route().current('worker.orders.index')"
+                        >
+                            Заявки в роботі
                         </ResponsiveNavLink>
                     </div>
 
-                    <!-- Responsive Settings Options -->
-                    <div
-                        class="border-t border-gray-200 pb-1 pt-4"
-                    >
+                    <!-- Настройки пользователя (мобильная версия) -->
+                    <div class="border-t border-gray-200 pb-1 pt-4">
                         <div class="px-4">
-                            <div
-                                class="text-base font-medium text-gray-800"
-                            >
+                            <div class="text-base font-medium text-gray-800">
                                 {{ $page.props.auth.user.name }}
                             </div>
                             <div class="text-sm font-medium text-gray-500">
@@ -165,31 +215,28 @@ const showingNavigationDropdown = ref(false);
 
                         <div class="mt-3 space-y-1">
                             <ResponsiveNavLink :href="route('profile.edit')">
-                                Profile
+                                Профіль
                             </ResponsiveNavLink>
                             <ResponsiveNavLink
                                 :href="route('logout')"
                                 method="post"
                                 as="button"
                             >
-                                Log Out
+                                Вийти
                             </ResponsiveNavLink>
                         </div>
                     </div>
                 </div>
             </nav>
 
-            <!-- Page Heading -->
-            <header
-                class="bg-white shadow"
-                v-if="$slots.header"
-            >
+            <!-- Заголовок страницы (если есть) -->
+            <header class="bg-white shadow" v-if="$slots.header">
                 <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
                     <slot name="header" />
                 </div>
             </header>
 
-            <!-- Page Content -->
+            <!-- Основной контент -->
             <main>
                 <slot />
             </main>

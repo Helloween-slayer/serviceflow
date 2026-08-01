@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Models\Order;
 use App\Models\Tag;
 use Illuminate\Http\Request;
@@ -59,10 +60,24 @@ class OrderController extends Controller
     /**
      * Всі заявки для адміна (повний список, без фільтрів).
      */
-    public function adminIndex()
+    public function adminDashboard()
     {
-        $orders = Order::with('tags', 'client', 'worker')->paginate(10);
-        return Inertia::render('Admin/Orders/Index', ['orders' => $orders]);
+        $stats = [
+            'totalOrders' => Order::count(),
+            'activeOrders' => Order::whereIn('status', ['new', 'in_progress'])->count(),
+            'completedOrders' => Order::whereIn('status', ['completed', 'ready'])->count(),
+            'totalUsers' => User::count(),
+        ];
+
+        $recentOrders = Order::with('client')
+            ->latest()
+            ->limit(10)
+            ->get();
+
+        return Inertia::render('Admin/Dashboard', [
+            'stats' => $stats,
+            'recentOrders' => $recentOrders,
+        ]);
     }
 
     /**

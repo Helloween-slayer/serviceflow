@@ -59,10 +59,7 @@ Route::middleware(['auth', 'role:worker'])->prefix('worker')->name('worker.')->g
 
 // ========== АДМІН — ЗАГОТОВКА ==========
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
-    // Дашборд админа
-    Route::get('/dashboard', function () {
-        return Inertia::render('Admin/Dashboard');})->name('dashboard');
-
+    Route::get('/dashboard', [OrderController::class, 'adminDashboard'])->name('dashboard');
     Route::get('/orders', [OrderController::class, 'adminIndex'])->name('orders.index');
 });
 
