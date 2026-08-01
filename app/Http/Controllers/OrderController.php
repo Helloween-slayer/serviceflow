@@ -57,9 +57,16 @@ class OrderController extends Controller
     /**
      * Адмін: список всіх заявок.
      */
-    public function adminOrders(OrderService $service)
+    public function adminOrders(Request $request,OrderService $service)
     {
-        $orders = $service->getAllOrders();
+        $status = $request->input('status');
+
+        if ($status && $status !== 'all') {
+            $orders = $service->getAllOrders($status);
+        } else {
+            $orders = $service->getAllOrders();
+        }
+
         return Inertia::render('Admin/Orders/Index', ['orders' => $orders]);
     }
 

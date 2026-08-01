@@ -70,9 +70,15 @@ class OrderService
         return $query->paginate(10);
     }
 
-    public function getAllOrders()
+    public function getAllOrders(?string $status = null)
     {
-        return Order::with('tags', 'client', 'worker')->paginate(10);
+        $query = Order::with('tags', 'client', 'worker');
+
+        if ($status && $status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        return $query->paginate(10);
     }
 
     // ========== СТАТИСТИКА ==========

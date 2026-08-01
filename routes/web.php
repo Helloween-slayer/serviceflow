@@ -60,7 +60,7 @@ Route::middleware(['auth', 'role:worker'])->prefix('worker')->name('worker.')->g
 // ========== АДМІН — ЗАГОТОВКА ==========
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [OrderController::class, 'adminDashboard'])->name('dashboard');
-    Route::get('/orders', [OrderController::class, 'adminIndex'])->name('orders.index');
+    Route::get('/orders', [OrderController::class, 'adminOrders'])->name('orders.index');
 });
 
 require __DIR__.'/auth.php';
