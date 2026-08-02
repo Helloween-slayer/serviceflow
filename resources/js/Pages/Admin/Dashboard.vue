@@ -32,7 +32,7 @@
                 <a :href="route('admin.orders.index')" class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded text-sm">
                     📋 Всі заявки
                 </a>
-                <a href="#" class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded text-sm">
+                <a :href="route('admin.users.index')" class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded text-sm">
                     👥 Користувачі
                 </a>
                 <a href="#" class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded text-sm">
