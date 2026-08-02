@@ -5,20 +5,21 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Role;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
 class UserController extends Controller
 {
     /**
-     * Вивести список усіх користувачів (тільки для адміна)
-     * З можливістю пошуку та фільтрації за роллю
+     * Список усіх користувачів (тільки для адміна)
      */
     public function index(Request $request)
     {
+        // Перевіряємо: чи може адмін переглядати список?
+        Gate::authorize('viewAny', User::class);
+
         $query = User::with('role');
 
-        // Поиск по имени или email
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -27,13 +28,11 @@ class UserController extends Controller
             });
         }
 
-        // Фильтр по роли
         if ($request->filled('role')) {
             $query->where('role_id', $request->role);
         }
 
         $users = $query->paginate(10)->withQueryString();
-
         $roles = Role::all();
 
         return Inertia::render('Admin/Users/Index', [
@@ -48,10 +47,10 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
-        // Підвантажуємо роль користувача
-        $user->load('role');
+        // Перевіряємо: чи може користувач редагувати цей профіль?
+        Gate::authorize('update', $user);
 
-        // Отримуємо всі ролі для випадаючого списку
+        $user->load('role');
         $roles = Role::all();
 
         return Inertia::render('Admin/Users/Edit', [
@@ -61,11 +60,13 @@ class UserController extends Controller
     }
 
     /**
-     * Оновлення даних користувача (адмін може змінювати роль та дані)
+     * Оновлення користувача (адмін може змінювати роль та дані)
      */
     public function update(Request $request, User $user)
     {
-        // Валідація вхідних даних
+        // Перевіряємо: чи може користувач редагувати цей профіль?
+        Gate::authorize('update', $user);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
@@ -73,51 +74,45 @@ class UserController extends Controller
             'password' => 'nullable|string|min:8|confirmed',
         ]);
 
-        // Підготовка даних для оновлення
         $updateData = [
             'name' => $validated['name'],
             'email' => $validated['email'],
             'role_id' => $validated['role_id'],
         ];
 
-        // Якщо пароль вказаний - хешуємо та додаємо до оновлення
         if (!empty($validated['password'])) {
-            $updateData['password'] = Hash::make($validated['password']);
+            $updateData['password'] = \Illuminate\Support\Facades\Hash::make($validated['password']);
         }
 
-        // Виконуємо оновлення
         $user->update($updateData);
 
-        // Редирект на список з повідомленням про успіх
         return redirect()->route('admin.users.index')
             ->with('success', "Користувача {$user->name} успішно оновлено");
     }
 
     /**
      * Видалення користувача (тільки для адміна)
-     * З додатковими перевірками безпеки
      */
     public function destroy(User $user)
     {
-        // Забороняємо видаляти самого себе
+        // Перевіряємо: чи може адмін видаляти цього користувача?
+        Gate::authorize('delete', $user);
+
+        // 🔒 Додаткова бізнес-логіка
+        // Не можна видаляти самого себе
         if ($user->id === auth()->id()) {
             return back()->with('error', 'Ви не можете видалити самого себе');
         }
 
-        // Забороняємо видаляти останнього адміністратора
-        // Щоб не залишити систему без адміна
+        // Не можна видаляти останнього адміна
         $adminCount = User::where('role_id', 1)->count();
         if ($user->role_id === 1 && $adminCount <= 1) {
             return back()->with('error', 'Не можна видалити останнього адміністратора');
         }
 
-        // Зберігаємо ім'я для повідомлення
         $userName = $user->name;
-
-        // Видаляємо користувача
         $user->delete();
 
-        // Редирект з повідомленням про успіх
         return redirect()->route('admin.users.index')
             ->with('success', "Користувача {$userName} успішно видалено");
     }

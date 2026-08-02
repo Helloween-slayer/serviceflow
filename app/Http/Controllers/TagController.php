@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Tag;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
 class TagController extends Controller
@@ -29,10 +30,13 @@ class TagController extends Controller
     }
 
     /**
-     * Збереження нового тега
+     * Збереження нового тега (тільки для адміна)
      */
     public function store(Request $request)
     {
+        // Перевіряємо: чи може адмін створювати теги?
+        Gate::authorize('create', Tag::class);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:tags,name',
         ]);
@@ -43,10 +47,13 @@ class TagController extends Controller
     }
 
     /**
-     * Оновлення тега
+     * Оновлення тега (тільки для адміна)
      */
     public function update(Request $request, Tag $tag)
     {
+        // Перевіряємо: чи може адмін редагувати цей тег?
+        Gate::authorize('update', $tag);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:tags,name,' . $tag->id,
         ]);
@@ -57,10 +64,14 @@ class TagController extends Controller
     }
 
     /**
-     * Видалення тега
+     * Видалення тега (тільки для адміна)
      */
     public function destroy(Tag $tag)
     {
+        // Перевіряємо: чи може адмін видаляти цей тег?
+        Gate::authorize('delete', $tag);
+
+        // 🔒 Бізнес-логіка: не можна видаляти тег, який використовується
         if ($tag->orders()->count() > 0) {
             return redirect()->back()->with('error', 'Неможливо видалити тег, який використовується в заявках');
         }
