@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\TagController;
+use App\Http\Controllers\TelegramController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -28,6 +29,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // ========== ТЕЛЕГРАМ ==========
+
+    Route::middleware(['auth'])->group(function () {
+        Route::post('/telegram/connect', [TelegramController::class, 'connect'])->name('telegram.connect');
+        Route::delete('/telegram/disconnect', [TelegramController::class, 'disconnect'])->name('telegram.disconnect');
+        Route::patch('/telegram/notifications', [TelegramController::class, 'toggleNotifications'])->name('telegram.notifications');
+        /** Route::post('/telegram/webhook', [TelegramController::class, 'webhook'])->name('telegram.webhook'); */
+    });
 });
 
 // ========== ПУБЛІЧНІ ЗАЯВКИ (ДЛЯ ВСІХ) ==========
@@ -74,6 +84,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('/tags', [TagController::class, 'store'])->name('tags.store');
     Route::put('/tags/{tag}', [TagController::class, 'update'])->name('tags.update');
     Route::delete('/tags/{tag}', [TagController::class, 'destroy'])->name('tags.destroy');
+
+
 });
 
 require __DIR__.'/auth.php';
