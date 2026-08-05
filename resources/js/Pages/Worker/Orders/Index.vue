@@ -1,126 +1,154 @@
 <template>
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
-                    <!-- Заголовок -->
-                    <div class="flex justify-between items-center mb-6">
-                        <h1 class="text-2xl font-bold">Мої заявки</h1>
-                    </div>
+    <AppLayout>
+        <div class="max-w-6xl mx-auto">
+            <!-- Заголовок -->
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">📋 Мої заявки</h1>
+                    <p class="text-gray-600 mt-1">Заявки, які ви взяли в роботу</p>
+                </div>
+                <span class="text-sm text-gray-500">
+                    Всього: {{ orders.total }}
+                </span>
+            </div>
 
-                    <!-- Таби -->
-                    <div class="flex gap-4 mb-6 border-b">
-                        <button
-                            @click="activeTab = 'active'"
-                            class="pb-2 px-4 font-medium"
-                            :class="activeTab === 'active' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-gray-700'"
-                        >
-                            Активні
-                        </button>
-                        <button
-                            @click="activeTab = 'completed'"
-                            class="pb-2 px-4 font-medium"
-                            :class="activeTab === 'completed' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-gray-700'"
-                        >
-                            Завершені
-                        </button>
-                    </div>
+            <!-- Вкладки -->
+            <div class="flex gap-2 mb-6">
+                <button
+                    @click="setTab('active')"
+                    :class="[
+                        'px-4 py-2 rounded-lg text-sm font-medium transition',
+                        activeTab === 'active'
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ]"
+                >
+                    📌 Активні
+                </button>
+                <button
+                    @click="setTab('completed')"
+                    :class="[
+                        'px-4 py-2 rounded-lg text-sm font-medium transition',
+                        activeTab === 'completed'
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ]"
+                >
+                    ✅ Завершені
+                </button>
+            </div>
 
-                    <!-- Список заявок -->
-                    <div v-if="filteredOrders.length > 0" class="space-y-4">
-                        <div
-                            v-for="order in filteredOrders"
-                            :key="order.id"
-                            class="border rounded-lg p-4 hover:shadow-md transition-shadow"
-                        >
-                            <div class="flex justify-between items-start">
-                                <div class="flex-1">
-                                    <!-- Назва -->
-                                    <h3 class="text-lg font-semibold text-gray-900">
-                                        {{ order.title }}
-                                    </h3>
+            <!-- Список заявок -->
+            <div v-if="filteredOrders.length > 0" class="space-y-4">
+                <div
+                    v-for="order in filteredOrders"
+                    :key="order.id"
+                    class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition"
+                >
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <!-- Назва -->
+                            <h3 class="text-lg font-semibold text-gray-900">
+                                {{ order.title }}
+                            </h3>
 
-                                    <!-- Опис -->
-                                    <p class="text-gray-600 mt-1">
-                                        {{ order.description || 'Опис відсутній' }}
-                                    </p>
+                            <!-- Опис -->
+                            <p class="text-gray-600 mt-1 text-sm">
+                                {{ order.description || 'Опис відсутній' }}
+                            </p>
 
-                                    <!-- Теги -->
-                                    <div v-if="order.tags && order.tags.length" class="flex gap-2 flex-wrap mt-2">
-                                        <span
-                                            v-for="tag in order.tags"
-                                            :key="tag.id"
-                                            class="bg-gray-200 text-gray-700 text-xs px-3 py-1 rounded-full"
-                                        >
-                                            {{ tag.name }}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <!-- Інформація справа -->
-                                <div class="text-right ml-4 flex-shrink-0">
-                                    <p class="text-sm font-semibold text-gray-900">
-                                        {{ order.price ?? 'Договірна' }} ₴
-                                    </p>
-                                    <p class="text-sm text-gray-500 mt-1">
-                                        📅 {{ order.deadline ? new Date(order.deadline).toLocaleDateString() : 'Невідомий' }}
-                                    </p>
-                                    <p class="text-sm text-gray-500">
-                                        📅 {{ new Date(order.created_at).toLocaleDateString() }}
-                                    </p>
-                                    <!-- Статус -->
-                                    <span
-                                        class="inline-block mt-2 text-xs px-3 py-1 rounded-full"
-                                        :class="getStatusBadge(order.status)"
-                                    >
-                                        {{ getStatusText(order.status) }}
-                                    </span>
-                                </div>
+                            <!-- Теги -->
+                            <div v-if="order.tags && order.tags.length" class="flex gap-1 mt-2 flex-wrap">
+                                <Badge
+                                    v-for="tag in order.tags"
+                                    :key="tag.id"
+                                    variant="gray"
+                                >
+                                    {{ tag.name }}
+                                </Badge>
                             </div>
+                        </div>
 
-                            <!-- Кнопки дій -->
-                            <div class="mt-4 pt-4 border-t flex gap-2">
-                                <!-- Используем ПУБЛИЧНЫЙ маршрут для просмотра -->
-                                <a
-                                    :href="route('orders.show', order.id)"
-                                    class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm"
-                                >
-                                    Переглянути
-                                </a>
-                                <button
-                                    v-if="order.status === 'in_progress'"
-                                    @click="completeOrder(order.id)"
-                                    class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 text-sm"
-                                >
-                                    Завершити
-                                </button>
+                        <!-- Інформація справа -->
+                        <div class="text-right ml-4 flex-shrink-0">
+                            <p class="text-sm font-semibold text-gray-900">
+                                {{ order.price ?? 'Договірна' }} ₴
+                            </p>
+                            <p class="text-sm text-gray-500 mt-1">
+                                📅 {{ order.deadline ? formatDate(order.deadline) : 'Невідомий' }}
+                            </p>
+                            <p class="text-sm text-gray-500">
+                                📅 {{ formatDate(order.created_at) }}
+                            </p>
+                            <!-- Статус -->
+                            <div class="mt-2">
+                                <Badge :variant="getStatusVariant(order.status)">
+                                    {{ getStatusText(order.status) }}
+                                </Badge>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Пустий стан -->
-                    <div v-else class="text-center py-12">
-                        <p class="text-gray-500">Немає заявок</p>
-                        <p class="text-sm text-gray-400 mt-1">
-                            {{ activeTab === 'active' ? 'Ви ще не взяли жодної заявки в роботу' : 'Немає завершених заявок' }}
-                        </p>
-                    </div>
+                    <!-- Кнопки дій -->
+                    <div class="mt-4 pt-4 border-t border-gray-100 flex gap-2">
+                        <Link
+                            :href="route('orders.show', order.id)"
+                            class="text-sm text-blue-500 hover:text-blue-700"
+                        >
+                            Переглянути
+                        </Link>
 
-                    <!-- Пагінація -->
-                    <div v-if="filteredOrders.length > 0" class="mt-6 pt-4 border-t">
-                        <p class="text-sm text-gray-500">
-                            Показано {{ filteredOrders.length }} з {{ orders.total }} заявок
-                        </p>
+                        <button
+                            v-if="order.status === 'in_progress'"
+                            @click="completeOrder(order.id)"
+                            class="text-sm text-green-500 hover:text-green-700"
+                        >
+                            Завершити
+                        </button>
+
+                        <button
+                            v-if="order.status === 'in_progress'"
+                            @click="cancelOrder(order.id)"
+                            class="text-sm text-orange-500 hover:text-orange-700"
+                        >
+                            Скасувати
+                        </button>
                     </div>
                 </div>
             </div>
+
+            <!-- Пустий стан -->
+            <EmptyState v-else>
+                <template #title>
+                    {{ activeTab === 'active' ? 'У вас немає активних заявок' : 'У вас немає завершених заявок' }}
+                </template>
+                <template #description>
+                    {{ activeTab === 'active' ? 'Ви ще не взяли жодної заявки в роботу' : 'Тут будуть відображатися завершені заявки' }}
+                </template>
+                <template #action v-if="activeTab === 'active'">
+                    <Link :href="route('orders.index')">
+                        <Button variant="primary">📋 Доступні заявки</Button>
+                    </Link>
+                </template>
+            </EmptyState>
+
+            <!-- Пагінація -->
+            <div v-if="filteredOrders.length > 0" class="mt-6">
+                <p class="text-sm text-gray-500">
+                    Показано {{ filteredOrders.length }} з {{ orders.total }} заявок
+                </p>
+            </div>
         </div>
-    </div>
+    </AppLayout>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
-import { router } from '@inertiajs/vue3';
+import { router, Link } from '@inertiajs/vue3';
+import AppLayout from '@/Layouts/AppLayout.vue';
+import Badge from '@/Components/UI/Badge.vue';
+import EmptyState from '@/Components/UI/EmptyState.vue';
+import Button from '@/Components/UI/Button.vue';
 
 const props = defineProps({
     orders: Object,
@@ -143,6 +171,21 @@ const filteredOrders = computed(() => {
     }
 });
 
+// Переключение вкладок
+const setTab = (tab) => {
+    activeTab.value = tab;
+    router.get(
+        '/worker/orders',
+        { status: tab === 'active' ? 'active' : 'completed' },
+        { preserveState: true, replace: true }
+    );
+};
+
+// Форматирование даты
+const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('uk-UA');
+};
+
 // Текст статусу
 const getStatusText = (status) => {
     const map = {
@@ -156,29 +199,46 @@ const getStatusText = (status) => {
 };
 
 // Кольори статусів
-const getStatusBadge = (status) => {
+const getStatusVariant = (status) => {
     const map = {
-        new: 'bg-blue-100 text-blue-800',
-        in_progress: 'bg-yellow-100 text-yellow-800',
-        ready: 'bg-purple-100 text-purple-800',
-        completed: 'bg-green-100 text-green-800',
-        cancelled: 'bg-red-100 text-red-800',
+        new: 'blue',
+        in_progress: 'yellow',
+        ready: 'purple',
+        completed: 'green',
+        cancelled: 'red',
     };
-    return map[status] || 'bg-gray-100 text-gray-800';
+    return map[status] || 'gray';
 };
 
 // Завершити заявку
 const completeOrder = (orderId) => {
-    if (confirm('Ви впевнені, що хочете завершити цю заявку?')) {
-        router.put(route('worker.orders.complete', orderId), {
-            onSuccess: () => {
-                router.reload();
-            },
-            onError: (errors) => {
-                alert('Не вдалося завершити заявку');
-                console.error(errors);
-            },
-        });
+    if (!confirm('Ви впевнені, що хочете завершити цю заявку?')) {
+        return;
     }
+
+    router.put(route('worker.orders.complete', orderId), {
+        onSuccess: () => {
+            router.reload();
+        },
+        onError: (errors) => {
+            alert(errors?.message || 'Не вдалося завершити заявку');
+        },
+    });
+};
+
+// Скасувати заявку
+const cancelOrder = (orderId) => {
+    if (!confirm('Ви впевнені, що хочете скасувати виконання цієї заявки?')) {
+        return;
+    }
+
+    router.put(route('worker.orders.cancel', orderId), {
+        onSuccess: () => {
+            router.reload();
+        },
+        onError: (errors) => {
+            alert(errors?.message || 'Не вдалося скасувати заявку');
+        },
+    });
 };
 </script>
