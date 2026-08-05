@@ -13,12 +13,17 @@ return new class extends Migration
     {
         Schema::create('worker_profiles', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->text('bio')->nullable();
-            $table->json('skills')->nullable();
+            $table->text('skills')->nullable();
+            $table->text('experience')->nullable();
+            $table->string('company')->nullable();
+            $table->string('phone')->nullable();
+            $table->string('location')->nullable();
+            $table->string('avatar')->nullable();
             $table->decimal('rating', 3, 2)->default(0);
-            $table->boolean('is_available')->default(true);
-            $table->softDeletes();
+            $table->integer('completed_orders')->default(0);
+            $table->boolean('is_verified')->default(false);
             $table->timestamps();
         });
     }

@@ -157,18 +157,21 @@ const props = defineProps({
 
 const activeTab = ref(props.activeTab || 'active');
 
-// Фільтрація заявок
+// Фильтрация заявок
 const filteredOrders = computed(() => {
     const orders = props.orders.data || [];
+
     if (activeTab.value === 'active') {
         return orders.filter(order =>
             order.status === 'in_progress' || order.status === 'new'
         );
-    } else {
+    } else if (activeTab.value === 'completed') {
         return orders.filter(order =>
             order.status === 'completed' || order.status === 'ready'
         );
     }
+
+    return [];
 });
 
 // Переключение вкладок
@@ -176,7 +179,7 @@ const setTab = (tab) => {
     activeTab.value = tab;
     router.get(
         '/worker/orders',
-        { status: tab === 'active' ? 'active' : 'completed' },
+        { status: tab },
         { preserveState: true, replace: true }
     );
 };

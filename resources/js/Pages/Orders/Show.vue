@@ -43,10 +43,17 @@
                         <span class="font-semibold">Email клієнта:</span>
                         {{ order.client?.email || 'Не вказано' }}
                     </p>
+                    <!-- 👇 ССЫЛКА НА ПРОФИЛЬ ВОРКЕРА -->
                     <p class="text-gray-600 mt-2">
                         <span class="font-semibold">Виконавець:</span>
-                        {{ order.worker?.name || 'Не призначений' }}
+                        <span v-if="order.worker">
+                            <Link :href="route('worker.profile.show', order.worker.id)" class="text-blue-500 hover:underline">
+                                {{ order.worker.name }}
+                            </Link>
+                        </span>
+                        <span v-else>Не призначений</span>
                     </p>
+                    <!-- ========================================== -->
                     <p class="text-gray-600 mt-2">
                         <span class="font-semibold">Створено:</span>
                         {{ new Date(order.created_at).toLocaleDateString() }}
@@ -111,6 +118,11 @@
                 >
                     🗑️ Видалити
                 </Button>
+
+                <!-- Залишити відгук (только клиент, заявка завершена, нет отзыва) -->
+                <Link v-if="canLeaveReview" :href="route('client.reviews.create', order.id)">
+                    <Button variant="primary">⭐ Залишити відгук</Button>
+                </Link>
             </div>
 
             <!-- Сообщения -->
@@ -211,6 +223,14 @@ const canDeleteOrder = computed(() => {
     return user?.role_id === 3
         && props.order.client_id === user?.id
         && props.order.status === 'new';
+});
+
+// Может ли клиент оставить отзыв?
+const canLeaveReview = computed(() => {
+    return user?.role_id === 3
+        && props.order.client_id === user?.id
+        && props.order.status === 'completed'
+        && !props.order.review;
 });
 
 // ==============================================

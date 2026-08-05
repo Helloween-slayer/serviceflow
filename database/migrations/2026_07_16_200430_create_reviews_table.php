@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::create('reviews', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('order_id')->constrained()->onDelete('cascade');
-            $table->foreignId('client_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('worker_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->tinyInteger('rating')->unsigned();
+            $table->foreignId('order_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('client_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('worker_id')->constrained('users')->cascadeOnDelete();
+            $table->tinyInteger('rating')->unsigned()->default(5);
             $table->text('comment')->nullable();
             $table->softDeletes();
             $table->timestamps();

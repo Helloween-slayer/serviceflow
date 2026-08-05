@@ -1,245 +1,115 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { Link, usePage } from '@inertiajs/vue3';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
-import Dropdown from '@/Components/Dropdown.vue';
-import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
-import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
-import { Link } from '@inertiajs/vue3';
 
-const showingNavigationDropdown = ref(false);
+const { auth } = usePage().props;
+const showDropdown = ref(false);
+
+// Получаем пользователя (может быть null)
+const user = computed(() => auth.user);
+
+const menuItems = computed(() => {
+    // Если пользователь не авторизован — показываем только общие пункты
+    if (!user.value) {
+        return [
+            { label: 'Головна', href: route('dashboard'), active: 'dashboard', icon: '🏠' }
+        ];
+    }
+
+    const role = user.value.role_id;
+    const items = [];
+
+    items.push({
+        label: 'Головна',
+        href: route('dashboard'),
+        active: 'dashboard',
+        icon: '🏠'
+    });
+
+    if (role === 1) { // Админ
+        items.push(
+            { label: 'Всі заявки', href: route('admin.orders.index'), active: 'admin.orders.index', icon: '📋' },
+            { label: 'Користувачі', href: route('admin.users.index'), active: 'admin.users.index', icon: '👥' },
+            { label: 'Теги', href: route('admin.tags.index'), active: 'admin.tags.index', icon: '🏷️' },
+            { label: 'Відгуки', href: route('admin.reviews.index'), active: 'admin.reviews.index', icon: '⭐' }
+        );
+    } else if (role === 2) { // Воркер
+        items.push(
+            { label: 'Мої заявки', href: route('worker.orders.index'), active: 'worker.orders.index', icon: '📋' },
+            { label: 'Мої відгуки', href: route('worker.reviews.index'), active: 'worker.reviews.index', icon: '⭐' }
+        );
+    } else if (role === 3) { // Клиент
+        items.push(
+            { label: 'Мої заявки', href: route('client.orders.index'), active: 'client.orders.index', icon: '📋' },
+            { label: 'Створити заявку', href: route('client.orders.create'), active: 'client.orders.create', icon: '➕' },
+            { label: 'Мої відгуки', href: route('client.reviews.index'), active: 'client.reviews.index', icon: '⭐' }
+        );
+    }
+
+    return items;
+});
 </script>
 
 <template>
-    <div>
-        <div class="min-h-screen bg-gray-100">
-            <nav class="border-b border-gray-100 bg-white">
-                <!-- Primary Navigation Menu -->
-                <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div class="flex h-16 justify-between">
-                        <div class="flex">
-                            <!-- Logo -->
-                            <div class="flex shrink-0 items-center">
-                                <Link :href="route('dashboard')">
-                                    <ApplicationLogo
-                                        class="block h-9 w-auto fill-current text-gray-800"
-                                    />
-                                </Link>
-                            </div>
+    <div class="min-h-screen bg-gray-100">
+        <!-- Шапка -->
+        <nav class="bg-white border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="flex justify-between h-16">
+                    <!-- Лого -->
+                    <div class="flex items-center">
+                        <Link :href="route('dashboard')">
+                            <ApplicationLogo class="h-9 w-auto fill-current text-gray-800" />
+                        </Link>
+                    </div>
 
-                            <!-- ========================================== -->
-                            <!-- 👇 ДЕСКТОПНОЕ МЕНЮ (для больших экранов)   -->
-                            <!-- ========================================== -->
-                            <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                <!-- Главная (для всех) -->
-                                <NavLink
-                                    :href="route('orders.index')"
-                                    :active="route().current('orders.index')"
-                                >
-                                    Головна
-                                </NavLink>
-
-                                <!-- 👇 ДЛЯ АДМИНА (role_id = 1) -->
-                                <NavLink
-                                    v-if="$page.props.auth.user.role_id === 1"
-                                    :href="route('admin.dashboard')"
-                                    :active="route().current('admin.dashboard')"
-                                >
-                                    ⚙️ Адмін-панель
-                                </NavLink>
-
-                                <!-- 👇 ДЛЯ КЛИЕНТА (role_id = 3) -->
-                                <NavLink
-                                    v-if="$page.props.auth.user.role_id === 3"
-                                    :href="route('client.orders.index')"
-                                    :active="route().current('client.orders.index')"
-                                >
-                                    Мої заявки
-                                </NavLink>
-
-                                <!-- 👇 ДЛЯ ВОРКЕРА (role_id = 2) -->
-                                <NavLink
-                                    v-if="$page.props.auth.user.role_id === 2"
-                                    :href="route('worker.orders.index')"
-                                    :active="route().current('worker.orders.index')"
-                                >
-                                    Заявки в роботі
-                                </NavLink>
-                            </div>
-                        </div>
-
-                        <!-- Настройки пользователя (аватар, выпадающее меню) -->
-                        <div class="hidden sm:ms-6 sm:flex sm:items-center">
-                            <div class="relative ms-3">
-                                <Dropdown align="right" width="48">
-                                    <template #trigger>
-                                        <span class="inline-flex rounded-md">
-                                            <button
-                                                type="button"
-                                                class="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
-                                            >
-                                                {{ $page.props.auth.user.name }}
-
-                                                <svg
-                                                    class="-me-0.5 ms-2 h-4 w-4"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 20 20"
-                                                    fill="currentColor"
-                                                >
-                                                    <path
-                                                        fill-rule="evenodd"
-                                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                        clip-rule="evenodd"
-                                                    />
-                                                </svg>
-                                            </button>
-                                        </span>
-                                    </template>
-
-                                    <template #content>
-                                        <DropdownLink :href="route('profile.edit')">
-                                            Профіль
-                                        </DropdownLink>
-                                        <DropdownLink
-                                            :href="route('logout')"
-                                            method="post"
-                                            as="button"
-                                        >
-                                            Вийти
-                                        </DropdownLink>
-                                    </template>
-                                </Dropdown>
-                            </div>
-                        </div>
-
-                        <!-- Бургер-меню (для мобильных) -->
-                        <div class="-me-2 flex items-center sm:hidden">
-                            <button
-                                @click="
-                                    showingNavigationDropdown =
-                                        !showingNavigationDropdown
-                                "
-                                class="inline-flex items-center justify-center rounded-md p-2 text-gray-400 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none"
+                    <!-- Меню -->
+                    <div class="flex items-center space-x-6">
+                        <template v-for="item in menuItems" :key="item.label">
+                            <NavLink
+                                :href="item.href"
+                                :active="route().current(item.active)"
                             >
-                                <svg
-                                    class="h-6 w-6"
-                                    stroke="currentColor"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        :class="{
-                                            hidden: showingNavigationDropdown,
-                                            'inline-flex':
-                                                !showingNavigationDropdown,
-                                        }"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M4 6h16M4 12h16M4 18h16"
-                                    />
-                                    <path
-                                        :class="{
-                                            hidden: !showingNavigationDropdown,
-                                            'inline-flex':
-                                                showingNavigationDropdown,
-                                        }"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
+                                {{ item.icon }} {{ item.label }}
+                            </NavLink>
+                        </template>
+
+                        <!-- Профиль (только для авторизованных) -->
+                        <div v-if="user" class="relative">
+                            <button
+                                @click="showDropdown = !showDropdown"
+                                class="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                            >
+                                {{ user.name }}
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                 </svg>
                             </button>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- ========================================== -->
-                <!-- 👇 МОБИЛЬНОЕ МЕНЮ (бургер)                -->
-                <!-- ========================================== -->
-                <div
-                    :class="{
-                        block: showingNavigationDropdown,
-                        hidden: !showingNavigationDropdown,
-                    }"
-                    class="sm:hidden"
-                >
-                    <div class="space-y-1 pb-3 pt-2">
-                        <!-- Главная (для всех) -->
-                        <ResponsiveNavLink
-                            :href="route('dashboard')"
-                            :active="route().current('dashboard')"
-                        >
-                            Головна
-                        </ResponsiveNavLink>
-
-                        <!-- 👇 ДЛЯ АДМИНА (role_id = 1) -->
-                        <ResponsiveNavLink
-                            v-if="$page.props.auth.user.role_id === 1"
-                            :href="route('admin.dashboard')"
-                            :active="route().current('admin.dashboard')"
-                        >
-                            ⚙️ Адмін-панель
-                        </ResponsiveNavLink>
-
-                        <!-- 👇 ДЛЯ КЛИЕНТА (role_id = 3) -->
-                        <ResponsiveNavLink
-                            v-if="$page.props.auth.user.role_id === 3"
-                            :href="route('client.orders.index')"
-                            :active="route().current('client.orders.index')"
-                        >
-                            Мої заявки
-                        </ResponsiveNavLink>
-
-                        <!-- 👇 ДЛЯ ВОРКЕРА (role_id = 2) -->
-                        <ResponsiveNavLink
-                            v-if="$page.props.auth.user.role_id === 2"
-                            :href="route('worker.orders.index')"
-                            :active="route().current('worker.orders.index')"
-                        >
-                            Заявки в роботі
-                        </ResponsiveNavLink>
-                    </div>
-
-                    <!-- Настройки пользователя (мобильная версия) -->
-                    <div class="border-t border-gray-200 pb-1 pt-4">
-                        <div class="px-4">
-                            <div class="text-base font-medium text-gray-800">
-                                {{ $page.props.auth.user.name }}
-                            </div>
-                            <div class="text-sm font-medium text-gray-500">
-                                {{ $page.props.auth.user.email }}
+                            <div v-if="showDropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                                <Link :href="route('profile.edit')" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    ⚙️ Налаштування
+                                </Link>
+                                <Link :href="route('logout')" method="post" as="button" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+                                    🚪 Вийти
+                                </Link>
                             </div>
                         </div>
 
-                        <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink :href="route('profile.edit')">
-                                Профіль
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink
-                                :href="route('logout')"
-                                method="post"
-                                as="button"
-                            >
-                                Вийти
-                            </ResponsiveNavLink>
-                        </div>
+                        <!-- Ссылка на логин для неавторизованных -->
+                        <Link v-else :href="route('login')" class="text-sm text-blue-500 hover:text-blue-700">
+                            Увійти
+                        </Link>
                     </div>
                 </div>
-            </nav>
+            </div>
+        </nav>
 
-            <!-- Заголовок страницы (если есть) -->
-            <header class="bg-white shadow" v-if="$slots.header">
-                <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                    <slot name="header" />
-                </div>
-            </header>
-
-            <!-- Основной контент -->
-            <main>
-                <slot />
-            </main>
-        </div>
+        <!-- Контент -->
+        <main class="max-w-7xl mx-auto px-6 py-8">
+            <slot />
+        </main>
     </div>
 </template>

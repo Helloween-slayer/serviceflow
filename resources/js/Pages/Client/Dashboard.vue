@@ -61,6 +61,23 @@
                         Переглянути →
                     </Link>
                 </Card>
+
+                <!-- Мої відгуки -->
+                <Card>
+                    <template #header>
+                        <div class="flex items-center gap-2 text-purple-600">
+                            <span class="text-xl">⭐</span>
+                            <span class="font-semibold">Мої відгуки</span>
+                        </div>
+                    </template>
+                    <p class="text-sm text-gray-600">Відгуки, які ви залишили</p>
+                    <Link
+                        :href="route('client.reviews.index')"
+                        class="inline-block mt-3 text-sm text-purple-600 font-medium hover:text-purple-800 hover:underline"
+                    >
+                        Переглянути →
+                    </Link>
+                </Card>
             </div>
 
             <!-- Telegram виджет -->

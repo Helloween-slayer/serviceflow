@@ -88,6 +88,40 @@ class OrderController extends Controller
     }
 
     /**
+     * Завершити заявку (тільки для воркера, який взяв її)
+     */
+    public function complete(Order $order)
+    {
+        // Перевіряємо, що заявка в роботі у цього воркера
+        if ($order->status !== 'in_progress' || $order->worker_id !== auth()->id()) {
+            return redirect()->back()->with('error', 'Ви не можете завершити цю заявку.');
+        }
+
+        $order->update([
+            'status' => 'completed',
+        ]);
+
+        return redirect()->route('worker.orders.index')->with('success', 'Заявку успішно завершено!');
+    }
+
+    /**
+     * Скасувати заявку (тільки для воркера, який взяв її)
+     */
+    public function cancel(Order $order)
+    {
+        if ($order->status !== 'in_progress' || $order->worker_id !== auth()->id()) {
+            return redirect()->back()->with('error', 'Ви не можете скасувати цю заявку.');
+        }
+
+        $order->update([
+            'worker_id' => null,
+            'status' => 'new',
+        ]);
+
+        return redirect()->route('worker.orders.index')->with('success', 'Виконання заявки скасовано.');
+    }
+
+    /**
      * Форма створення заявки.
      */
     public function create()

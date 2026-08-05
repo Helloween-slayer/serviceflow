@@ -10,7 +10,7 @@
             </div>
 
             <!-- Карточки -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- Доступні заявки -->
                 <Card>
                     <template #header>
@@ -44,6 +44,28 @@
                         Переглянути →
                     </Link>
                 </Card>
+
+                <!-- Мої відгуки -->
+                <Card>
+                    <template #header>
+                        <div class="flex items-center gap-2 text-purple-600">
+                            <span class="text-xl">⭐</span>
+                            <span class="font-semibold">Мої відгуки</span>
+                        </div>
+                    </template>
+                    <p class="text-sm text-gray-600">
+                        Відгуки, які ви отримали
+                        <span v-if="reviewsCount > 0" class="font-medium text-purple-600">
+                            ({{ reviewsCount }})
+                        </span>
+                    </p>
+                    <Link
+                        :href="route('worker.reviews.index')"
+                        class="inline-block mt-3 text-sm text-purple-600 font-medium hover:text-purple-800 hover:underline"
+                    >
+                        Переглянути →
+                    </Link>
+                </Card>
             </div>
 
             <!-- Telegram виджет -->
@@ -55,8 +77,12 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
+import { usePage, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Card from '@/Components/UI/Card.vue';
 import TelegramWidget from '@/Components/Dashboard/TelegramWidget.vue';
-import { Link } from '@inertiajs/vue3';
+
+const { reviewsCount } = usePage().props;
+
 </script>
