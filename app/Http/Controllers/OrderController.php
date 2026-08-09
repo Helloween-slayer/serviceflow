@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Tag;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
+use App\Jobs\SendNotificationJob;
 use Inertia\Inertia;
 
 class OrderController extends Controller
@@ -79,10 +80,14 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'Ця заявка вже не доступна.');
         }
 
+        $oldStatus = $order->status;
+
         $order->update([
             'worker_id' => auth()->id(),
             'status' => 'in_progress',
         ]);
+
+        SendNotificationJob::dispatch($order, $oldStatus, $order->status);
 
         return redirect()->route('worker.orders.index')->with('success', 'Заявку взято в роботу.');
     }
@@ -97,9 +102,13 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'Ви не можете завершити цю заявку.');
         }
 
+        $oldStatus = $order->status;
+
         $order->update([
             'status' => 'completed',
         ]);
+
+        SendNotificationJob::dispatch($order, $oldStatus, $order->status);
 
         return redirect()->route('worker.orders.index')->with('success', 'Заявку успішно завершено!');
     }
@@ -113,10 +122,14 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'Ви не можете скасувати цю заявку.');
         }
 
+        $oldStatus = $order->status;
+
         $order->update([
             'worker_id' => null,
             'status' => 'new',
         ]);
+
+        SendNotificationJob::dispatch($order, $oldStatus, $order->status);
 
         return redirect()->route('worker.orders.index')->with('success', 'Виконання заявки скасовано.');
     }
