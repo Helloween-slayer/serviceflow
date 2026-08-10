@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "13a6b2f17451cd16b4cc5eca6a20d7e5",
+    "content-hash": "3a60dd84d8a321dbfe0c8ddd642d85dd",
     "packages": [
         {
             "name": "brick/math",
@@ -2303,6 +2303,59 @@
                 }
             ],
             "time": "2026-03-08T20:05:35+00:00"
+        },
+        {
+            "name": "liqpay/liqpay",
+            "version": "v1.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/liqpay/sdk-php.git",
+                "reference": "7e79519523e125d27047a901a8ea65b86b5e854f"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/liqpay/sdk-php/zipball/7e79519523e125d27047a901a8ea65b86b5e854f",
+                "reference": "7e79519523e125d27047a901a8ea65b86b5e854f",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": ">=10.4.1"
+            },
+            "type": "library",
+            "autoload": {
+                "classmap": [
+                    "./LiqPay.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "OSL 3.0"
+            ],
+            "authors": [
+                {
+                    "name": "Liqpay",
+                    "email": "support@liqpay.ua",
+                    "homepage": "https://www.liqpay.ua/",
+                    "role": "Developer"
+                }
+            ],
+            "description": "SDK for Liqpay",
+            "homepage": "https://github.com/liqpay/sdk-php",
+            "keywords": [
+                "checkout",
+                "liqpay",
+                "pay",
+                "payment",
+                "sdk"
+            ],
+            "support": {
+                "issues": "https://github.com/liqpay/sdk-php/issues",
+                "source": "https://github.com/liqpay/sdk-php/tree/v1.4"
+            },
+            "time": "2025-04-23T11:50:20+00:00"
         },
         {
             "name": "monolog/monolog",
