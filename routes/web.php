@@ -10,6 +10,7 @@ use App\Http\Controllers\AdminReviewController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TelegramController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\PaymentController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -102,5 +103,14 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/reviews', [AdminReviewController::class, 'index'])->name('reviews.index');
     Route::delete('/reviews/{review}', [AdminReviewController::class, 'destroy'])->name('reviews.destroy');
 });
+
+    // Поповнення балансу
+    Route::middleware(['auth'])->prefix('payment')->name('payment.')->group(function () {
+        Route::post('/deposit', [PaymentController::class, 'deposit'])->name('deposit');
+    });
+
+    // Callback від LiqPay (публічний)
+    Route::post('/liqpay/callback', [PaymentController::class, 'callback'])->name('liqpay.callback');
+
 
 require __DIR__ . '/auth.php';

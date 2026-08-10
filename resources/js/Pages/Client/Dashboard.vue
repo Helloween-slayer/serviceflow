@@ -62,7 +62,7 @@
                     </Link>
                 </Card>
 
-                <!-- Мої відгуки -->
+                <!-- 4. Мої відгуки -->
                 <Card>
                     <template #header>
                         <div class="flex items-center gap-2 text-purple-600">
@@ -80,6 +80,42 @@
                 </Card>
             </div>
 
+            <!-- 💰 ПОПОВНЕННЯ БАЛАНСУ -->
+            <div class="mt-8 pt-6 border-t border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">💰 Баланс</h3>
+
+                <div class="flex items-center gap-6 mb-4">
+                    <span class="text-2xl font-bold text-green-600">
+                        {{ $page.props.auth.user.balance }} ₴
+                    </span>
+                </div>
+
+                <form @submit.prevent="deposit" class="flex flex-col sm:flex-row gap-3">
+                    <div>
+                        <Input
+                            v-model="depositAmount"
+                            type="number"
+                            step="1"
+                            min="1"
+                            placeholder="Сума поповнення"
+                            class="w-48"
+                            required
+                        />
+                    </div>
+                    <Button
+                        type="submit"
+                        :loading="depositing"
+                        variant="success"
+                    >
+                        💳 Поповнити баланс
+                    </Button>
+                </form>
+
+                <p class="text-xs text-gray-400 mt-2">
+                    Поповнення через LiqPay (ПриватБанк). Мінімальна сума — 1 грн.
+                </p>
+            </div>
+
             <!-- Telegram виджет -->
             <div class="mt-8">
                 <TelegramWidget />
@@ -89,8 +125,38 @@
 </template>
 
 <script setup>
+import { ref } from 'vue';
+import { router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Card from '@/Components/UI/Card.vue';
 import TelegramWidget from '@/Components/Dashboard/TelegramWidget.vue';
+import Input from '@/Components/UI/Input.vue';
+import Button from '@/Components/UI/Button.vue';
 import { Link } from '@inertiajs/vue3';
+
+const depositAmount = ref('');
+const depositing = ref(false);
+
+const deposit = () => {
+    if (!depositAmount.value || depositAmount.value < 1) {
+        alert('Введіть коректну суму');
+        return;
+    }
+
+    depositing.value = true;
+
+    router.post('/payment/deposit', {
+        amount: depositAmount.value,
+    }, {
+        onSuccess: () => {
+            depositing.value = false;
+            depositAmount.value = '';
+        },
+        onError: (errors) => {
+            depositing.value = false;
+            const message = errors?.amount || errors?.message || 'Не вдалося поповнити баланс';
+            alert(message);
+        },
+    });
+};
 </script>

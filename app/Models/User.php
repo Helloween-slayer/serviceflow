@@ -18,7 +18,61 @@ class User extends Authenticatable
         'role_id',
         'telegram_id',
         'telegram_notifications',
+        'balance',
     ];
+
+    public function deposit(float $amount, ?string $paymentId = null, ?string $description = null): self
+    {
+        // 1. Увеличиваем баланс
+        $this->balance += $amount;
+        $this->save();
+
+        // 2. Создаем запись в истории транзакций
+        Transaction::create([
+            'user_id' => $this->id,
+            'type' => 'deposit',
+            'amount' => $amount,
+            'balance_after' => $this->balance,
+            'status' => 'completed',
+            'payment_id' => $paymentId,
+            'description' => $description ?? 'Поповнення балансу',
+        ]);
+
+        return $this;
+    }
+
+    /**
+     * Перевірити, чи достатньо коштів на балансі
+     */
+    public function hasBalance(float $amount): bool
+    {
+        return $this->balance >= $amount;
+    }
+
+    /**
+     * Списати кошти з балансу
+     */
+    public function withdraw(float $amount, ?int $orderId = null, ?string $description = null): self
+    {
+        if (!$this->hasBalance($amount)) {
+            throw new \Exception('Недостатньо коштів на балансі');
+        }
+
+        $this->balance -= $amount;
+        $this->save();
+
+        Transaction::create([
+            'user_id' => $this->id,
+            'order_id' => $orderId,
+            'type' => 'hold',
+            'amount' => -$amount,
+            'balance_after' => $this->balance,
+            'status' => 'completed',
+            'description' => $description ?? 'Списання коштів',
+        ]);
+
+        return $this;
+    }
 
     public function role()
     {

@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'liqpay' => [
+        'public_key' => env('LIQPAY_PUBLIC_KEY'),
+        'private_key' => env('LIQPAY_PRIVATE_KEY'),
+        'server_url' => env('LIQPAY_SERVER_URL'),
+    ],
+
 ];
