@@ -10,6 +10,7 @@ use App\Http\Requests\Order\UpdateOrderRequest;
 use App\Models\Order;
 use App\Models\Tag;
 use App\Services\OrderService;
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -88,9 +89,25 @@ class OrderController extends Controller
      */
     public function takeOrder(Order $order, TakeOrderAction $action)
     {
-        // Перевіряємо, що заявка доступна
+        //  Проверяем права
+        Gate::authorize('take', $order);
+
+        //  Проверяем, что заявка доступна
         if ($order->status !== 'new' || $order->worker_id !== null) {
             return redirect()->back()->with('error', 'Ця заявка вже не доступна.');
+        }
+
+        //  Получаем клиента и проверяем баланс
+        $client = $order->client;
+        $price = $order->price ?? 0;
+
+        if ($price > 0 && !$client->hasBalance($price)) {
+            return redirect()->back()->with('error', 'У клієнта недостатньо коштів для оплати заявки.');
+        }
+
+        //  Если цена > 0 — списываем с клиента
+        if ($price > 0) {
+            $client->withdraw($price, $order->id, "Оплата заявки #{$order->id}");
         }
 
         $action->execute($order);
@@ -103,9 +120,20 @@ class OrderController extends Controller
      */
     public function complete(Order $order, CompleteOrderAction $action)
     {
+        Gate::authorize('complete', $order);
+
         // Перевіряємо, що заявка в роботі у цього воркера
         if ($order->status !== 'in_progress' || $order->worker_id !== auth()->id()) {
             return redirect()->back()->with('error', 'Ви не можете завершити цю заявку.');
+        }
+
+        //  Получаем воркера и сумму
+        $worker = $order->worker;
+        $price = $order->price ?? 0;
+
+        //  Если цена > 0 — зачисляем воркеру
+        if ($price > 0 && $worker) {
+            $worker->deposit($price, null, "Оплата заявки #{$order->id}");
         }
 
         $action->execute($order);
@@ -118,9 +146,27 @@ class OrderController extends Controller
      */
     public function cancel(Order $order, CancelOrderAction $action)
     {
+        Gate::authorize('cancel', $order);
+
         // Перевіряємо, що заявка в роботі у цього воркера
         if ($order->status !== 'in_progress' || $order->worker_id !== auth()->id()) {
             return redirect()->back()->with('error', 'Ви не можете скасувати цю заявку.');
+        }
+
+        //  Возвращаем деньги клиенту
+        $client = $order->client;
+        $price = $order->price ?? 0;
+
+        if ($price > 0 && $client) {
+            // Проверяем, была ли уже списана сумма
+            $transaction = Transaction::where('order_id', $order->id)
+                ->where('type', 'hold')
+                ->where('status', 'completed')
+                ->first();
+
+            if ($transaction) {
+                $client->deposit($price, null, "Повернення коштів за заявку #{$order->id}");
+            }
         }
 
         $action->execute($order);
