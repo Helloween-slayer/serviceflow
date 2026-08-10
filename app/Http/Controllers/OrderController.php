@@ -2,30 +2,42 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Actions\Order\CancelOrderAction;
+use App\Http\Actions\Order\CompleteOrderAction;
+use App\Http\Actions\Order\TakeOrderAction;
+use App\Http\Requests\Order\StoreOrderRequest;
+use App\Http\Requests\Order\UpdateOrderRequest;
 use App\Models\Order;
 use App\Models\Tag;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
-use App\Jobs\SendNotificationJob;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
 class OrderController extends Controller
 {
+    protected OrderService $orderService;
+
+    public function __construct(OrderService $orderService)
+    {
+        $this->orderService = $orderService;
+    }
+
     /**
      * Публічний список — тільки доступні заявки (status = new, worker_id = null).
      */
     public function index()
     {
-        $orders = OrderService::getAvailableOrders();
+        $orders = $this->orderService->getAvailableOrders();
         return Inertia::render('Orders/Index', ['orders' => $orders]);
     }
 
     /**
      * Заявки поточного клієнта.
      */
-    public function clientOrders(Request $request, OrderService $service)
+    public function clientOrders(Request $request)
     {
-        $orders = $service->getClientOrders(auth()->id(), $request->status);
+        $orders = $this->orderService->getClientOrders(auth()->id(), $request->status);
         return Inertia::render('Client/Orders/Index', [
             'orders' => $orders,
             'activeTab' => $request->status ?? 'active'
@@ -35,9 +47,9 @@ class OrderController extends Controller
     /**
      * Заявки поточного воркера.
      */
-    public function workerOrders(Request $request, OrderService $service)
+    public function workerOrders(Request $request)
     {
-        $orders = $service->getWorkerOrders(auth()->id(), $request->status);
+        $orders = $this->orderService->getWorkerOrders(auth()->id(), $request->status);
         return Inertia::render('Worker/Orders/Index', [
             'orders' => $orders,
             'activeTab' => $request->status ?? 'active'
@@ -47,25 +59,25 @@ class OrderController extends Controller
     /**
      * Адмін-дашборд: статистика та останні заявки.
      */
-    public function adminDashboard(OrderService $service)
+    public function adminDashboard()
     {
         return Inertia::render('Admin/Dashboard', [
-            'stats' => $service->getStats(),
-            'recentOrders' => $service->getRecentOrders(),
+            'stats' => $this->orderService->getStats(),
+            'recentOrders' => $this->orderService->getRecentOrders(),
         ]);
     }
 
     /**
      * Адмін: список всіх заявок.
      */
-    public function adminOrders(Request $request,OrderService $service)
+    public function adminOrders(Request $request)
     {
         $status = $request->input('status');
 
         if ($status && $status !== 'all') {
-            $orders = $service->getAllOrders($status);
+            $orders = $this->orderService->getAllOrders($status);
         } else {
-            $orders = $service->getAllOrders();
+            $orders = $this->orderService->getAllOrders();
         }
 
         return Inertia::render('Admin/Orders/Index', ['orders' => $orders]);
@@ -74,20 +86,14 @@ class OrderController extends Controller
     /**
      * Взяти заявку в роботу (тільки для виконавця).
      */
-    public function takeOrder(Order $order)
+    public function takeOrder(Order $order, TakeOrderAction $action)
     {
+        // Перевіряємо, що заявка доступна
         if ($order->status !== 'new' || $order->worker_id !== null) {
             return redirect()->back()->with('error', 'Ця заявка вже не доступна.');
         }
 
-        $oldStatus = $order->status;
-
-        $order->update([
-            'worker_id' => auth()->id(),
-            'status' => 'in_progress',
-        ]);
-
-        SendNotificationJob::dispatch($order, $oldStatus, $order->status);
+        $action->execute($order);
 
         return redirect()->route('worker.orders.index')->with('success', 'Заявку взято в роботу.');
     }
@@ -95,20 +101,14 @@ class OrderController extends Controller
     /**
      * Завершити заявку (тільки для воркера, який взяв її)
      */
-    public function complete(Order $order)
+    public function complete(Order $order, CompleteOrderAction $action)
     {
         // Перевіряємо, що заявка в роботі у цього воркера
         if ($order->status !== 'in_progress' || $order->worker_id !== auth()->id()) {
             return redirect()->back()->with('error', 'Ви не можете завершити цю заявку.');
         }
 
-        $oldStatus = $order->status;
-
-        $order->update([
-            'status' => 'completed',
-        ]);
-
-        SendNotificationJob::dispatch($order, $oldStatus, $order->status);
+        $action->execute($order);
 
         return redirect()->route('worker.orders.index')->with('success', 'Заявку успішно завершено!');
     }
@@ -116,20 +116,14 @@ class OrderController extends Controller
     /**
      * Скасувати заявку (тільки для воркера, який взяв її)
      */
-    public function cancel(Order $order)
+    public function cancel(Order $order, CancelOrderAction $action)
     {
+        // Перевіряємо, що заявка в роботі у цього воркера
         if ($order->status !== 'in_progress' || $order->worker_id !== auth()->id()) {
             return redirect()->back()->with('error', 'Ви не можете скасувати цю заявку.');
         }
 
-        $oldStatus = $order->status;
-
-        $order->update([
-            'worker_id' => null,
-            'status' => 'new',
-        ]);
-
-        SendNotificationJob::dispatch($order, $oldStatus, $order->status);
+        $action->execute($order);
 
         return redirect()->route('worker.orders.index')->with('success', 'Виконання заявки скасовано.');
     }
@@ -139,36 +133,15 @@ class OrderController extends Controller
      */
     public function create()
     {
-        $tags = Tag::all();
-        return Inertia::render('Client/Orders/Create', ['tags' => $tags]);
+        return Inertia::render('Client/Orders/Create', ['tags' => Tag::all()]);
     }
 
     /**
      * Збереження заявки.
      */
-    public function store(Request $request)
+    public function store(StoreOrderRequest $request)
     {
-        $data = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'price' => 'nullable|numeric',
-            'deadline' => 'nullable|date',
-            'tags' => 'nullable|array',
-            'tags.*' => 'exists:tags,id',
-        ]);
-
-        $order = Order::create([
-            'client_id' => auth()->id(),
-            'title' => $data['title'],
-            'description' => $data['description'],
-            'price' => $data['price'],
-            'deadline' => $data['deadline'],
-            'status' => 'new',
-        ]);
-
-        if (!empty($data['tags'])) {
-            $order->tags()->attach($data['tags']);
-        }
+        $order = $this->orderService->createOrder($request->validated());
 
         return redirect()->route('client.orders.index')->with('success', 'Заявка створена');
     }
@@ -187,34 +160,27 @@ class OrderController extends Controller
      */
     public function edit(Order $order)
     {
-        $tags = Tag::all();
+        // Перевіряємо, чи може клієнт редагувати цю заявку
+        if (auth()->user()->role_id !== 3 || $order->client_id !== auth()->id()) {
+            abort(403, 'Ви не можете редагувати цю заявку.');
+        }
+
+        if ($order->status !== 'new') {
+            return redirect()->route('client.orders.index')->with('error', 'Можна редагувати тільки нові заявки');
+        }
+
         return Inertia::render('Client/Orders/Edit', [
             'order' => $order->load('tags'),
-            'tags' => $tags,
+            'tags' => Tag::all(),
         ]);
     }
 
     /**
      * Оновлення заявки (клієнт).
      */
-    public function update(Request $request, Order $order)
+    public function update(UpdateOrderRequest $request, Order $order)
     {
-        $data = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'price' => 'nullable|numeric',
-            'deadline' => 'nullable|date',
-            'tags' => 'nullable|array',
-            'tags.*' => 'exists:tags,id',
-        ]);
-
-        $order->update($data);
-
-        if ($request->has('tags')) {
-            $order->tags()->sync($data['tags']);
-        } else {
-            $order->tags()->detach();
-        }
+        $this->orderService->updateOrder($order, $request->validated());
 
         return redirect()->route('client.orders.index')->with('success', 'Заявка оновлена');
     }
@@ -224,6 +190,15 @@ class OrderController extends Controller
      */
     public function destroy(Order $order)
     {
+        // Перевіряємо, чи може клієнт видалити цю заявку
+        if (auth()->user()->role_id !== 3 || $order->client_id !== auth()->id()) {
+            abort(403, 'Ви не можете видалити цю заявку.');
+        }
+
+        if ($order->status !== 'new') {
+            return redirect()->route('orders.index')->with('error', 'Можна видаляти тільки нові заявки');
+        }
+
         try {
             $order->delete();
             return redirect()->route('orders.index')->with('success', 'Заявку успішно видалено');

@@ -81,6 +81,45 @@ class OrderService
         return $query->paginate(10);
     }
 
+    // ========== СТВОРЕННЯ ТА ОНОВЛЕННЯ ==========
+
+    /**
+     * Створити нову заявку
+     */
+    public function createOrder(array $data): Order
+    {
+        $order = Order::create([
+            'client_id' => auth()->id(),
+            'title' => $data['title'],
+            'description' => $data['description'] ?? null,
+            'price' => $data['price'] ?? null,
+            'deadline' => $data['deadline'] ?? null,
+            'status' => Order::STATUS_NEW,
+        ]);
+
+        if (!empty($data['tags'])) {
+            $order->tags()->attach($data['tags']);
+        }
+
+        return $order;
+    }
+
+    /**
+     * Оновити заявку
+     */
+    public function updateOrder(Order $order, array $data): Order
+    {
+        $order->update($data);
+
+        if (isset($data['tags'])) {
+            $order->tags()->sync($data['tags']);
+        } else {
+            $order->tags()->detach();
+        }
+
+        return $order;
+    }
+
     // ========== СТАТИСТИКА ==========
 
     public function getStats(): array
