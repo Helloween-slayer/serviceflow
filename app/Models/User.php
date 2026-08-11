@@ -118,4 +118,9 @@ class User extends Authenticatable
     {
         return $this->role?->name === 'client';
     }
+
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class);
+    }
 }

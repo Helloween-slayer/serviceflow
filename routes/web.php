@@ -11,6 +11,8 @@ use App\Http\Controllers\TagController;
 use App\Http\Controllers\TelegramController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\Worker\WithdrawalController as WorkerWithdrawalController;
+use App\Http\Controllers\Admin\WithdrawalController as AdminWithdrawalController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -83,6 +85,9 @@ Route::middleware(['auth', 'role:worker'])->prefix('worker')->name('worker.')->g
     Route::put('/profile', [WorkerProfileController::class, 'update'])->name('profile.update');
 
     Route::get('/reviews', [WorkerReviewController::class, 'index'])->name('reviews.index');
+
+    Route::get('/balance', [WorkerWithdrawalController::class, 'index'])->name('balance.index');
+    Route::post('/balance/withdraw', [WorkerWithdrawalController::class, 'store'])->name('balance.withdraw');
 });
 
 // ========== АДМІН ==========
@@ -102,6 +107,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     Route::get('/reviews', [AdminReviewController::class, 'index'])->name('reviews.index');
     Route::delete('/reviews/{review}', [AdminReviewController::class, 'destroy'])->name('reviews.destroy');
+
+    Route::get('/withdrawals', [AdminWithdrawalController::class, 'index'])->name('withdrawals.index');
+    Route::put('/withdrawals/{withdrawal}', [AdminWithdrawalController::class, 'update'])->name('withdrawals.update');
 });
 
     // Поповнення балансу
