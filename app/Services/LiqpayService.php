@@ -2,37 +2,54 @@
 
 namespace App\Services;
 
-use LiqPay;
-
 class LiqpayService
 {
-    protected LiqPay $liqpay;
+    protected $liqpay;
 
     public function __construct()
     {
-        $this->liqpay = new LiqPay(
+        $this->liqpay = new \LiqPay(
             config('services.liqpay.public_key'),
             config('services.liqpay.private_key')
         );
     }
 
     /**
-     * Створити платіж
+     * Створити платеж в LiqPay (возвращает ссылку)
      */
-    public function createPayment(float $amount, string $description, string $orderId): object
+    public function createPayment(float $amount, string $description, string $orderId): string
     {
+        \Log::info('=== LIQPAY CREATE PAYMENT ===');
+        \Log::info('Amount: ' . $amount);
+        \Log::info('OrderId: ' . $orderId);
+
+        $publicKey = config('services.liqpay.public_key');
+        $privateKey = config('services.liqpay.private_key');
+
+        \Log::info('Public key: ' . $publicKey);
+        \Log::info('Private key length: ' . strlen($privateKey));
+
         $data = [
+            'public_key' => $publicKey,
+            'version' => '3',
             'action' => 'pay',
             'amount' => $amount,
             'currency' => 'UAH',
             'description' => $description,
             'order_id' => $orderId,
-            'version' => '3',
             'server_url' => config('services.liqpay.server_url'),
             'result_url' => route('client.dashboard'),
+            'sandbox' => 1,
         ];
 
-        return $this->liqpay->api('request', $data);
+        $encodedData = base64_encode(json_encode($data));
+        $signature = base64_encode(sha1($privateKey . $encodedData . $privateKey, 1));
+
+        $url = 'https://www.liqpay.ua/api/3/checkout?data=' . $encodedData . '&signature=' . $signature;
+
+        \Log::info('Generated URL: ' . substr($url, 0, 200) . '...');
+
+        return $url;
     }
 
     /**

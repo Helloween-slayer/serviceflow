@@ -11,7 +11,6 @@ const showDropdown = ref(false);
 const user = computed(() => auth.user);
 
 const menuItems = computed(() => {
-    // Если пользователь не авторизован — показываем только общие пункты
     if (!user.value) {
         return [
             { label: 'Головна', href: route('dashboard'), active: 'dashboard', icon: '🏠' }
@@ -21,6 +20,7 @@ const menuItems = computed(() => {
     const role = user.value.role_id;
     const items = [];
 
+    // 👇 БЕЗ ИКОНКИ В LABEL
     items.push({
         label: 'Головна',
         href: route('dashboard'),
@@ -30,21 +30,27 @@ const menuItems = computed(() => {
 
     if (role === 1) { // Админ
         items.push(
+            { label: 'Мій дашборд', href: route('admin.dashboard'), active: 'admin.dashboard', icon: '📊' },
             { label: 'Всі заявки', href: route('admin.orders.index'), active: 'admin.orders.index', icon: '📋' },
             { label: 'Користувачі', href: route('admin.users.index'), active: 'admin.users.index', icon: '👥' },
             { label: 'Теги', href: route('admin.tags.index'), active: 'admin.tags.index', icon: '🏷️' },
-            { label: 'Відгуки', href: route('admin.reviews.index'), active: 'admin.reviews.index', icon: '⭐' }
+            { label: 'Відгуки', href: route('admin.reviews.index'), active: 'admin.reviews.index', icon: '⭐' },
+            { label: 'Виведення', href: route('admin.withdrawals.index'), active: 'admin.withdrawals.index', icon: '📤' }
         );
     } else if (role === 2) { // Воркер
         items.push(
+            { label: 'Мій дашборд', href: route('worker.dashboard'), active: 'worker.dashboard', icon: '📊' },
             { label: 'Мої заявки', href: route('worker.orders.index'), active: 'worker.orders.index', icon: '📋' },
-            { label: 'Мої відгуки', href: route('worker.reviews.index'), active: 'worker.reviews.index', icon: '⭐' }
+            { label: 'Мої відгуки', href: route('worker.reviews.index'), active: 'worker.reviews.index', icon: '⭐' },
+            { label: 'Баланс', href: route('worker.balance.index'), active: 'worker.balance.index', icon: '💰' }
         );
     } else if (role === 3) { // Клиент
         items.push(
+            { label: 'Мій дашборд', href: route('client.dashboard'), active: 'client.dashboard', icon: '📊' },
             { label: 'Мої заявки', href: route('client.orders.index'), active: 'client.orders.index', icon: '📋' },
             { label: 'Створити заявку', href: route('client.orders.create'), active: 'client.orders.create', icon: '➕' },
-            { label: 'Мої відгуки', href: route('client.reviews.index'), active: 'client.reviews.index', icon: '⭐' }
+            { label: 'Мої відгуки', href: route('client.reviews.index'), active: 'client.reviews.index', icon: '⭐' },
+            { label: 'Баланс', href: route('client.dashboard'), active: 'client.dashboard', icon: '💰' }
         );
     }
 

@@ -126,7 +126,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { router } from '@inertiajs/vue3';
+import axios from 'axios';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Card from '@/Components/UI/Card.vue';
 import TelegramWidget from '@/Components/Dashboard/TelegramWidget.vue';
@@ -145,18 +145,24 @@ const deposit = () => {
 
     depositing.value = true;
 
-    router.post('/payment/deposit', {
-        amount: depositAmount.value,
-    }, {
-        onSuccess: () => {
+    axios.post('/payment/deposit', {
+        amount: depositAmount.value
+    })
+        .then(response => {
             depositing.value = false;
             depositAmount.value = '';
-        },
-        onError: (errors) => {
+
+            // ✅ Перенаправляем на LiqPay
+            if (response.data && response.data.redirect_url) {
+                window.location.href = response.data.redirect_url;
+            } else {
+                alert('Перенаправлення на сторінку оплати...');
+            }
+        })
+        .catch(error => {
             depositing.value = false;
-            const message = errors?.amount || errors?.message || 'Не вдалося поповнити баланс';
+            const message = error.response?.data?.message || 'Не вдалося поповнити баланс';
             alert(message);
-        },
-    });
+        });
 };
 </script>

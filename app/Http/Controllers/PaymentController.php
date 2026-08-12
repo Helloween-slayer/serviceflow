@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\LiqpayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class PaymentController extends Controller
 {
@@ -23,42 +24,43 @@ class PaymentController extends Controller
      */
     public function deposit(DepositRequest $request)
     {
-        $user = auth()->user();
-        $amount = $request->amount;
-        $orderId = 'deposit_' . uniqid();
+        \Log::info('=== DEPOSIT START ===');
+        \Log::info('User: ' . auth()->id());
+        \Log::info('Amount: ' . $request->amount);
 
-        // Создаем транзакцию со статусом pending
-        $transaction = Transaction::create([
-            'user_id' => $user->id,
-            'type' => 'deposit',
-            'amount' => $amount,
-            'balance_after' => $user->balance ?? 0,
-            'status' => 'pending',
-            'description' => 'Поповнення балансу через LiqPay',
-        ]);
+        try {
+            $user = auth()->user();
+            $amount = $request->amount;
+            $orderId = 'deposit_' . uniqid();
 
-        // Создаем платеж в LiqPay
-        $result = $this->liqpayService->createPayment(
-            $amount,
-            "Поповнення балансу (#{$transaction->id})",
-            $orderId
-        );
+            \Log::info('Step 1: User found', ['user_id' => $user->id]);
 
-        // Сохраняем payment_id
-        $transaction->update([
-            'payment_id' => $result->order_id ?? null,
-        ]);
+            $transaction = Transaction::create([
+                'user_id' => $user->id,
+                'type' => 'deposit',
+                'amount' => $amount,
+                'balance_after' => $user->balance ?? 0,
+                'status' => 'pending',
+                'description' => 'Поповнення балансу через LiqPay',
+            ]);
 
-        // Если LiqPay вернул ошибку
-        if ($result->result !== 'ok') {
-            $transaction->update(['status' => 'failed']);
-            return back()->with('error', 'Помилка оплати: ' . ($result->err_description ?? 'не відома'));
+            \Log::info('Step 2: Transaction created', ['transaction_id' => $transaction->id]);
+
+            $paymentUrl = $this->liqpayService->createPayment(
+                $amount,
+                "Поповнення балансу (#{$transaction->id})",
+                $orderId
+            );
+
+            \Log::info('Step 3: Payment URL generated', ['url' => $paymentUrl]);
+
+            return response()->json(['redirect_url' => $paymentUrl]);
+
+        } catch (\Exception $e) {
+            \Log::error('DEPOSIT ERROR: ' . $e->getMessage());
+            \Log::error($e->getTraceAsString());
+            return response()->json(['message' => 'Помилка: ' . $e->getMessage()], 500);
         }
-
-        // ✅ Оплата прошла — пополняем баланс
-        $user->deposit($amount, $result->order_id, 'Поповнення через LiqPay');
-
-        return redirect()->route('client.dashboard')->with('success', "Баланс поповнено на {$amount} грн!");
     }
 
     /**
@@ -81,7 +83,7 @@ class PaymentController extends Controller
                 return response()->json(['status' => 'ok']);
             }
 
-            // Находим транзакцию
+            // Находим транзакцию по payment_id
             $transaction = Transaction::where('payment_id', $data['order_id'])->first();
 
             if (!$transaction) {
@@ -89,7 +91,7 @@ class PaymentController extends Controller
                 return response()->json(['status' => 'ok']);
             }
 
-            // Проверяем, что транзакция еще не обработана
+            // Если транзакция уже завершена — ничего не делаем
             if ($transaction->status === 'completed') {
                 return response()->json(['status' => 'ok']);
             }
