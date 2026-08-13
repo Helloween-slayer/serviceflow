@@ -72,6 +72,13 @@
             </div>
 
             <!-- ========================================== -->
+            <!-- 👇 ЧАТ (только участники и админ) -->
+            <!-- ========================================== -->
+            <div v-if="canViewChat" class="mt-8">
+                <Chat :order-id="order.id" />
+            </div>
+
+            <!-- ========================================== -->
             <!-- 👇 КНОПКИ С ПРАВИЛЬНЫМИ УСЛОВИЯМИ -->
             <!-- ========================================== -->
             <div class="flex flex-wrap gap-3 mt-6 pt-6 border-t border-gray-200">
@@ -166,6 +173,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import Badge from '@/Components/UI/Badge.vue';
 import Button from '@/Components/UI/Button.vue';
 import Modal from '@/Components/UI/Modal.vue';
+import Chat from '@/Components/Chat.vue';
 
 const props = defineProps({
     order: Object,
@@ -187,7 +195,7 @@ const errorMessage = ref('');
 const successMessage = ref('');
 
 // ==============================================
-// 👇 ПРОВЕРКА ПРАВ (computed)
+// 👇 ПРОВЕРКА ПРАВ
 // ==============================================
 
 // Может ли воркер взять заявку?
@@ -231,6 +239,25 @@ const canLeaveReview = computed(() => {
         && props.order.client_id === user?.id
         && props.order.status === 'completed'
         && !props.order.review;
+});
+
+// ==============================================
+// 👇 ЧАТ ДОСТУПЕН ТОЛЬКО УЧАСТНИКАМ
+// ==============================================
+
+const canViewChat = computed(() => {
+    const userId = user?.id;
+    const isAdmin = user?.role_id === 1;
+
+    // Если заявка не взята — чат недоступен
+    if (props.order.worker_id === null) {
+        return false;
+    }
+
+    // Если заявка взята — чат видят: клиент, воркер, админ
+    return props.order.client_id === userId
+        || props.order.worker_id === userId
+        || isAdmin;
 });
 
 // ==============================================

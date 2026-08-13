@@ -13,6 +13,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Worker\WithdrawalController as WorkerWithdrawalController;
 use App\Http\Controllers\Admin\WithdrawalController as AdminWithdrawalController;
+use App\Http\Controllers\MessageController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -44,6 +45,9 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/telegram/disconnect', [TelegramController::class, 'disconnect'])->name('telegram.disconnect');
     Route::patch('/telegram/notifications', [TelegramController::class, 'toggleNotifications'])->name('telegram.notifications');
     // Route::post('/telegram/webhook', [TelegramController::class, 'webhook'])->name('telegram.webhook');
+
+    Route::get('/orders/{order}/messages', [MessageController::class, 'index'])->name('messages.index');
+    Route::post('/orders/{order}/messages', [MessageController::class, 'store'])->name('messages.store');
 });
 
 // ========== ПУБЛІЧНІ ЗАЯВКИ (ДЛЯ ВСІХ) ==========
