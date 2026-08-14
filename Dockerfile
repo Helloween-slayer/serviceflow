@@ -18,7 +18,7 @@ WORKDIR /var/www
 COPY . .
 
 # Устанавливаем зависимости
-RUN composer install --no-dev --optimize-autoloader
+RUN composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-posix
 RUN npm install && npm run build
 
 # Права на папки
