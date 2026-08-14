@@ -27,7 +27,7 @@ RUN npm install && npm run build
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
 # Очистка и кеширование
-RUN php artisan optimize:clear
+# RUN php artisan optimize:clear
 RUN php artisan config:cache
 RUN php artisan route:cache
 RUN php artisan view:cache
