@@ -26,6 +26,9 @@ RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 RUN php artisan migrate --force
 RUN php artisan optimize:clear
 RUN php artisan migrate --force
+RUN php artisan config:cache
+RUN php artisan route:cache
+RUN php artisan view:cache
 
 EXPOSE 10000
 CMD php artisan serve --host=0.0.0.0 --port=10000
