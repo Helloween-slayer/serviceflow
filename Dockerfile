@@ -24,6 +24,8 @@ RUN npm install && npm run build
 # Права на папки
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 RUN php artisan migrate --force
+RUN php artisan optimize:clear
+RUN php artisan migrate --force
 
 EXPOSE 10000
 CMD php artisan serve --host=0.0.0.0 --port=10000
