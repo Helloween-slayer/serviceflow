@@ -1,8 +1,8 @@
 FROM php:8.4-fpm
 
-# Устанавливаем зависимости
+# Устанавливаем системные зависимости
 RUN apt-get update && apt-get install -y \
-    git curl libpng-dev libonig-dev libxml2-dev zip unzip libpq-dev
+    git curl libpng-dev libonig-dev libxml2-dev zip unzip libpq-dev nginx
 
 # Устанавливаем расширения PHP
 RUN docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath gd
@@ -17,7 +17,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 WORKDIR /var/www
 COPY . .
 
-# Устанавливаем зависимости
+# Устанавливаем зависимости (игнорируем pcntl/posix для Windows)
 RUN composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-posix
 
 # Устанавливаем фронтенд
@@ -26,12 +26,8 @@ RUN npm install && npm run build
 # Права на папки
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
-# Очистка и кеширование
-# RUN php artisan optimize:clear
-RUN php artisan config:cache
-RUN php artisan route:cache
-RUN php artisan view:cache
-RUN php artisan migrate --force
+# Очистка кэша
+RUN php artisan optimize:clear
 
 EXPOSE 10000
 CMD php artisan serve --host=0.0.0.0 --port=10000
