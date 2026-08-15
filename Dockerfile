@@ -19,5 +19,8 @@ RUN npm install && npm run build
 
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
+# 👇 ДОБАВЬ ЭТО
+RUN php artisan migrate --force
+
 EXPOSE 10000
 CMD php artisan serve --host=0.0.0.0 --port=10000
