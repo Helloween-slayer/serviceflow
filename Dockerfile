@@ -22,8 +22,7 @@ RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 EXPOSE 10000
 
 # 👇 Миграции выполняются ПРИ ЗАПУСКЕ КОНТЕЙНЕРА
-CMD php artisan key:generate --force && \
-    php artisan config:cache && \
-    php artisan migrate --force && \
+CMD php artisan config:cache && \
+    php artisan migrate --force --no-interaction && \
     php artisan storage:link && \
     php artisan serve --host=0.0.0.0 --port=10000
