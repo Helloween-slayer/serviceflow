@@ -52,7 +52,8 @@ RUN chown -R www-data:www-data \
     /var/www/bootstrap/cache
 
 # Конфигурация Nginx
-RUN echo 'server {
+RUN cat > /etc/nginx/sites-available/default <<'EOF'
+server {
     listen 10000;
     server_name _;
 
@@ -97,10 +98,11 @@ RUN echo 'server {
     location ~ /\.(?!well-known).* {
         deny all;
     }
-}' > /etc/nginx/sites-available/default
+}
+EOF
 
 # Render использует порт 10000
 EXPOSE 10000
 
-# Запускаем PHP-FPM напрямую, затем Nginx
+# Запускаем PHP-FPM и Nginx
 CMD ["sh", "-c", "php-fpm -D && nginx -g 'daemon off;'"]
