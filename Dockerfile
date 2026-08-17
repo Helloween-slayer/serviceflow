@@ -17,7 +17,8 @@ WORKDIR /var/www
 COPY . .
 
 # Сборка зависимостей
-RUN composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-posix
+RUN composer config -g repo.packagist composer https://packagist.phpcomposer.com && \
+    composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-posix
 RUN npm install && npm run build
 
 # Права на папки
