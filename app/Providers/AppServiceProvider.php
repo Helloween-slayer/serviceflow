@@ -15,7 +15,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        Vite::prefetch(concurrency: 3);
+        $this->app->make(\Illuminate\Foundation\Vite::class)->prefetch(concurrency: 3);
 
         if (app()->environment('production')) {
             URL::forceScheme('https');
