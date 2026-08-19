@@ -91,7 +91,7 @@ class OrderTest extends TestCase
             'client_id' => $client->id,
         ]);
 
-        \DB::table('order_tag')->insert(['order_id' => $order->id, 'tag_id' => $tag->id]);
+        $order->tags()->attach($tag->id);
 
         $response = $this->actingAs($admin)->delete(route('admin.tags.destroy', $tag));
         $response->assertRedirect();
