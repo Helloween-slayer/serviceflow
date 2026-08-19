@@ -24,7 +24,7 @@ RUN npm install && npm run build
 # Права на папки
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
-# Создаем конфиг Nginx прямо внутри Dockerfile (всё в одном файле)
+# Создаем конфиг Nginx прямо внутри Dockerfile
 RUN echo 'server { \
     listen 10000; \
     root /var/www/public; \
@@ -55,8 +55,11 @@ RUN echo 'server { \
     } \
 }' > /etc/nginx/sites-available/default
 
-# Очистка кеша (без миграций здесь, они будут в CMD)
-RUN php artisan optimize:clear
+# Очистка кеша (безопасно, не лезет в БД)
+RUN php artisan config:clear && \
+    php artisan cache:clear && \
+    php artisan route:clear && \
+    php artisan view:clear
 
 EXPOSE 10000
 
