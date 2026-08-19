@@ -1,5 +1,13 @@
 <template>
     <AppLayout>
+        <!-- Блок с flash-сообщениями (перед заголовком) -->
+        <div v-if="$page.props.flash?.error" class="max-w-4xl mx-auto mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+            {{ $page.props.flash.error }}
+        </div>
+        <div v-if="$page.props.flash?.success" class="max-w-4xl mx-auto mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+            {{ $page.props.flash.success }}
+        </div>
+
         <div class="max-w-4xl mx-auto">
             <!-- Заголовок -->
             <div class="mb-8">

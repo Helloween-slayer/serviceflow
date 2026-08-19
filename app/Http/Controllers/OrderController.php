@@ -187,6 +187,11 @@ class OrderController extends Controller
      */
     public function store(StoreOrderRequest $request)
     {
+        if ($request->price > 0 && !auth()->user()->hasBalance($request->price)) {
+            return redirect()->route('client.dashboard')
+                ->with('error', 'Поповніть баланс перед створенням заявки');
+        }
+
         $order = $this->orderService->createOrder($request->validated());
 
         return redirect()->route('client.orders.index')->with('success', 'Заявка створена');

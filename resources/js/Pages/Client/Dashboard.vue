@@ -1,6 +1,14 @@
 <template>
     <AppLayout>
         <div class="max-w-5xl mx-auto px-6 py-8">
+            <!-- Блок с flash-сообщениями (перед приветствием) -->
+            <div v-if="$page.props.flash?.error" class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                {{ $page.props.flash.error }}
+            </div>
+            <div v-if="$page.props.flash?.success" class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+                {{ $page.props.flash.success }}
+            </div>
+
             <!-- Приветствие -->
             <div class="mb-8">
                 <h1 class="text-2xl font-bold text-gray-900">
