@@ -25,7 +25,6 @@ RUN npm install && npm run build
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
 # ===== ГЕНЕРАЦИЯ КОНФИГА NGINX =====
-# Вставляем переменную PORT из окружения Render
 RUN echo 'server { \
     listen ${PORT:-10000}; \
     root /var/www/public; \
@@ -56,16 +55,10 @@ RUN echo 'server { \
     } \
 }' > /etc/nginx/sites-available/default
 
-# ===== ОЧИСТКА СТАРОГО КЕША =====
-RUN php artisan optimize:clear
-
 EXPOSE ${PORT:-10000}
 
 # ===== ЗАПУСК =====
 CMD php artisan migrate --force --no-interaction && \
     php artisan storage:link && \
-    # Убираем config:cache, чтобы переменные Render подхватывались каждый раз
-    php artisan route:cache && \
-    php artisan view:cache && \
     service php-fpm start && \
     nginx -g "daemon off;"
