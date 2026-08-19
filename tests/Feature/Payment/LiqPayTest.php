@@ -16,12 +16,14 @@ class LiqPayTest extends TestCase
 
     public function test_deposit_creates_pending_transaction()
     {
+        $this->mock(LiqpayService::class, function ($mock) {
+            $mock->shouldReceive('createPayment')
+                ->once()
+                ->andReturn('https://liqpay.ua/checkout/...');
+        });
+
         Role::forceCreate(['id' => 3, 'name' => 'client', 'display_name' => 'Клієнт']);
         $user = User::factory()->create(['role_id' => 3, 'balance' => 0]);
-
-        Http::fake([
-            '*' => Http::response(['redirect_url' => 'https://liqpay.ua/checkout/...'], 200),
-        ]);
 
         $response = $this->actingAs($user)->postJson(route('payment.deposit'), [
             'amount' => 100,
@@ -43,7 +45,6 @@ class LiqPayTest extends TestCase
         Role::forceCreate(['id' => 3, 'name' => 'client', 'display_name' => 'Клієнт']);
         $user = User::factory()->create(['role_id' => 3, 'balance' => 0]);
 
-        // Створюємо транзакцію
         $transaction = Transaction::create([
             'user_id' => $user->id,
             'type' => 'deposit',
@@ -53,14 +54,12 @@ class LiqPayTest extends TestCase
             'payment_id' => 'test_order_123',
         ]);
 
-        // 🟢 ДОДАЄМО МОК ДЛЯ LiqpayService, щоб verifySignature завжди повертав true
         $this->mock(LiqpayService::class, function ($mock) {
             $mock->shouldReceive('verifySignature')
                 ->once()
                 ->andReturn(true);
         });
 
-        // Емулюємо запит від LiqPay
         $response = $this->postJson(route('liqpay.callback'), [
             'order_id' => 'test_order_123',
             'status' => 'success',
@@ -68,7 +67,6 @@ class LiqPayTest extends TestCase
 
         $response->assertOk();
 
-        // Перевіряємо баланс
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
             'balance' => 100,
