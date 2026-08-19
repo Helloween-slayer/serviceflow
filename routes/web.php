@@ -124,5 +124,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Callback від LiqPay (публічний)
     Route::post('/liqpay/callback', [PaymentController::class, 'callback'])->name('liqpay.callback');
 
+Route::get('/health', function () {
+    return response()->json(['status' => 'ok']);
+});
 
 require __DIR__ . '/auth.php';
