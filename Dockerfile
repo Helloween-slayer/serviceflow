@@ -60,5 +60,5 @@ EXPOSE ${PORT:-10000}
 # ===== ЗАПУСК =====
 CMD php artisan migrate --force --no-interaction && \
     php artisan storage:link && \
-    service php-fpm start && \
+    php-fpm -F & \
     nginx -g "daemon off;"
