@@ -1,8 +1,8 @@
 FROM php:8.4-fpm
 
-# Устанавливаем зависимости
+# Устанавливаем системные зависимости + Nginx
 RUN apt-get update && apt-get install -y \
-    git curl libpng-dev libonig-dev libxml2-dev zip unzip libpq-dev
+    git curl libpng-dev libonig-dev libxml2-dev zip unzip libpq-dev nginx
 
 # Устанавливаем расширения PHP
 RUN docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath gd
@@ -17,18 +17,55 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 WORKDIR /var/www
 COPY . .
 
-# Устанавливаем зависимости
+# Устанавливаем зависимости (продакшен)
 RUN composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-posix
 RUN npm install && npm run build
 
 # Права на папки
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
-RUN php artisan migrate --force
-RUN php artisan optimize:clear
-RUN php artisan migrate --force
-RUN php artisan config:cache
-RUN php artisan route:cache
-RUN php artisan view:cache
 
-EXPOSE 10000
-CMD php artisan serve --host=0.0.0.0 --port=10000
+# ===== ГЕНЕРАЦИЯ КОНФИГА NGINX =====
+# Вставляем переменную PORT из окружения Render
+RUN echo 'server { \
+    listen ${PORT:-10000}; \
+    root /var/www/public; \
+    index index.php index.html; \
+    add_header X-Frame-Options "SAMEORIGIN"; \
+    add_header X-Content-Type-Options "nosniff"; \
+    charset utf-8; \
+    location / { \
+        try_files $uri $uri/ /index.php?$query_string; \
+    } \
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ { \
+        expires max; \
+        log_not_found off; \
+        access_log off; \
+        try_files $uri =404; \
+    } \
+    location = /favicon.ico { access_log off; log_not_found off; } \
+    location = /robots.txt  { access_log off; log_not_found off; } \
+    error_page 404 /index.php; \
+    location ~ \.php$ { \
+        fastcgi_pass 127.0.0.1:9000; \
+        fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name; \
+        include fastcgi_params; \
+        fastcgi_hide_header X-Powered-By; \
+    } \
+    location ~ /\.(?!well-known).* { \
+        deny all; \
+    } \
+}' > /etc/nginx/sites-available/default
+
+# ===== ОЧИСТКА СТАРОГО КЕША =====
+RUN php artisan optimize:clear
+
+EXPOSE ${PORT:-10000}
+
+# ===== ЗАПУСК =====
+CMD php artisan migrate --force --no-interaction && \
+    php artisan storage:link && \
+    # Убираем config:cache, чтобы переменные Render подхватывались каждый раз
+    php artisan route:cache && \
+    php artisan view:cache && \
+    service php-fpm start && \
+    nginx -g "daemon off;"
