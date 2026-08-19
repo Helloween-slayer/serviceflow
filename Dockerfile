@@ -26,7 +26,7 @@ RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
 # ===== ГЕНЕРАЦИЯ КОНФИГА NGINX =====
 RUN echo 'server { \
-    listen ${PORT:-10000}; \
+    listen 10000; \
     root /var/www/public; \
     index index.php index.html; \
     add_header X-Frame-Options "SAMEORIGIN"; \
@@ -55,7 +55,7 @@ RUN echo 'server { \
     } \
 }' > /etc/nginx/sites-available/default
 
-EXPOSE ${PORT:-10000}
+EXPOSE 10000
 
 # ===== ЗАПУСК =====
 CMD php artisan migrate --force --no-interaction && \
