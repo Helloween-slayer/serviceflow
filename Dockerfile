@@ -1,26 +1,31 @@
 FROM php:8.4-fpm
 
+# Устанавливаем системные зависимости + Nginx
 RUN apt-get update && apt-get install -y \
     git curl libpng-dev libonig-dev libxml2-dev zip unzip libpq-dev nginx
 
+# Устанавливаем расширения PHP
 RUN docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath gd
 
+# Устанавливаем Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Устанавливаем Node.js
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs
 
 WORKDIR /var/www/html
 COPY . .
 
+# Устанавливаем зависимости (продакшен)
 RUN composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-posix
 RUN npm install && npm run build
 
+# Права на папки
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# 🔍 ПЕРЕВІРКА ШЛЯХУ (тимчасово)
+# 🔍 ПЕРЕВІРКА ШЛЯХУ (тимчасово) — тільки для першої папки
 RUN echo "=== CONTENT OF /var/www/html/public ===" && ls -la /var/www/html/public
-RUN echo "=== CONTENT OF /var/www/public ===" && ls -la /var/www/public
 
 RUN echo 'server { \
     listen 10000; \
@@ -54,6 +59,7 @@ RUN echo 'server { \
 
 EXPOSE 10000
 
+# ===== ЗАПУСК =====
 CMD php artisan migrate --force --no-interaction && \
     php artisan storage:link && \
     php-fpm -F & \
