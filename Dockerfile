@@ -24,10 +24,10 @@ RUN npm install && npm run build
 # Права на папки
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
-# ===== ГЕНЕРАЦИЯ КОНФИГА NGINX =====
+# ===== ГЕНЕРАЦИЯ КОНФИГА NGINX (шлях змінено) =====
 RUN echo 'server { \
     listen 10000; \
-    root /var/www/public; \
+    root /var/www/html/public; \
     index index.php index.html; \
     add_header X-Frame-Options "SAMEORIGIN"; \
     add_header X-Content-Type-Options "nosniff"; \
@@ -54,9 +54,6 @@ RUN echo 'server { \
         deny all; \
     } \
 }' > /etc/nginx/sites-available/default
-
-# ===== СОЗДАЕМ СИМВОЛИЧЕСКУЮ ССЫЛКУ =====
-RUN ln -s /var/www/public /var/www/html/public
 
 EXPOSE 10000
 
