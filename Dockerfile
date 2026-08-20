@@ -24,9 +24,7 @@ RUN npm install && npm run build
 # Права на папки
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# 🔍 ПЕРЕВІРКА ШЛЯХУ (тимчасово) — тільки для першої папки
-RUN echo "=== CONTENT OF /var/www/html/public ===" && ls -la /var/www/html/public
-
+# ===== ГЕНЕРАЦИЯ КОНФИГА NGINX =====
 RUN echo 'server { \
     listen 10000; \
     root /var/www/html/public; \
@@ -48,7 +46,7 @@ RUN echo 'server { \
     error_page 404 /index.php; \
     location ~ \.php$ { \
         fastcgi_pass 127.0.0.1:9000; \
-        fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name; \
+        fastcgi_param SCRIPT_FILENAME /var/www/html/public$fastcgi_script_name; \
         include fastcgi_params; \
         fastcgi_hide_header X-Powered-By; \
     } \
