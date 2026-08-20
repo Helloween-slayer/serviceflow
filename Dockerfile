@@ -55,6 +55,9 @@ RUN echo 'server { \
     } \
 }' > /etc/nginx/sites-available/default
 
+# ===== СОЗДАЕМ СИМВОЛИЧЕСКУЮ ССЫЛКУ =====
+RUN ln -s /var/www/public /var/www/html/public
+
 EXPOSE 10000
 
 # ===== ЗАПУСК =====
