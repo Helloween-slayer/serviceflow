@@ -29,11 +29,6 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Request::HEADER_X_FORWARDED_AWS_ELB
         );
     })
-
-    ->withBroadcasting(function () {
-        Broadcast::routes();
-    })
-
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
