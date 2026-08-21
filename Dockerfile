@@ -57,6 +57,10 @@ RUN echo 'server { \
     } \
 }' > /etc/nginx/sites-available/default
 
+# ===== СОЗДАЁМ СИМВОЛИЧЕСКУЮ ССЫЛКУ (чтобы Nginx всегда находил public) =====
+RUN ln -s /var/www/html/public /var/www/html/public
+RUN ln -s /var/www/html/public /var/www/public
+
 EXPOSE 8080
 
 # ===== ЗАПУСК =====
