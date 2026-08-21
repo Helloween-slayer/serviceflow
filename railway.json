@@ -3,7 +3,8 @@
     "build": {
         "builder": "NIXPACKS",
         "nixpacks": {
-            "php": "8.4"
+            "php": "8.4",
+            "node": "20"
         }
     },
     "deploy": {
