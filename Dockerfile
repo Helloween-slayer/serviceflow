@@ -34,6 +34,8 @@ RUN echo 'server { \
     charset utf-8; \
     location / { \
         try_files $uri $uri/ /index.php?$query_string; \
+        proxy_set_header X-Forwarded-Proto $scheme; \
+        proxy_set_header X-Forwarded-Host $host; \
     } \
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ { \
         expires max; \
@@ -55,7 +57,6 @@ RUN echo 'server { \
     } \
 }' > /etc/nginx/sites-available/default
 
-ENV PORT 8080
 EXPOSE 8080
 
 # ===== ЗАПУСК =====
