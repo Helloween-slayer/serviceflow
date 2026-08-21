@@ -17,17 +17,16 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 WORKDIR /var/www/html
 COPY . .
 
-# 🟢 ДОДАЄМО ОЧИСТКУ КЕШУ VITE ПЕРЕД ЗБІРКОЮ
-RUN rm -rf public/build && \
-    composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-posix && \
-    npm install && npm run build
+# Устанавливаем зависимости (продакшен)
+RUN composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-posix
+RUN npm install && npm run build
 
 # Права на папки
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 # ===== ГЕНЕРАЦИЯ КОНФИГА NGINX =====
 RUN echo 'server { \
-    listen 10000; \
+    listen 8080; \
     root /var/www/html/public; \
     index index.php index.html; \
     add_header X-Frame-Options "SAMEORIGIN"; \
@@ -56,7 +55,7 @@ RUN echo 'server { \
     } \
 }' > /etc/nginx/sites-available/default
 
-EXPOSE 10000
+EXPOSE 8080
 
 # ===== ЗАПУСК =====
 CMD php artisan migrate --force --no-interaction && \
