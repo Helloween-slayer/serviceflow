@@ -18,8 +18,9 @@ WORKDIR /var/www/html
 COPY . .
 
 # Устанавливаем зависимости (продакшен)
-RUN composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-posix
-RUN npm install && npm run build
+RUN rm -rf public/build && \
+    composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-posix && \
+    npm install && npm run build
 
 # Права на папки
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
