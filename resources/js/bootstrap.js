@@ -11,6 +11,7 @@ window.Pusher = Pusher;
 const echo = new Echo({
     broadcaster: 'pusher',
     key: import.meta.env.VITE_PUSHER_APP_KEY,
+    cluster: 'eu',
     wsHost: import.meta.env.VITE_PUSHER_HOST,
     wsPort: import.meta.env.VITE_PUSHER_PORT ?? 8080,
     wssPort: import.meta.env.VITE_PUSHER_PORT ?? 8080,
