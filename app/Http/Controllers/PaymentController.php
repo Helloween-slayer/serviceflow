@@ -70,56 +70,25 @@ class PaymentController extends Controller
      */
     public function callback(Request $request)
     {
-        try {
-            $data = $request->all();
+        $data = $request->all();
 
-            // Проверяем подпись
-            if (!$this->liqpayService->verifySignature($data)) {
-                Log::warning('LiqPay: неверная подпись');
-                return response()->json(['error' => 'Invalid signature'], 403);
-            }
-
-            // Проверяем статус платежа
-            if (!isset($data['status']) || $data['status'] !== 'success') {
-                Log::warning('LiqPay: статус платежа не success', ['status' => $data['status'] ?? 'unknown']);
-                return response()->json(['status' => 'ok']);
-            }
-
-            // Находим транзакцию по payment_id
-            $transaction = Transaction::where('payment_id', $data['order_id'])->first();
-
-            if (!$transaction) {
-                Log::warning('LiqPay: транзакция не найдена', ['order_id' => $data['order_id'] ?? 'null']);
-                return response()->json(['status' => 'ok']);
-            }
-
-            // Если транзакция уже завершена — ничего не делаем
-            if ($transaction->status === 'completed') {
-                return response()->json(['status' => 'ok']);
-            }
-
-            // Обновляем транзакцию и пополняем баланс
-            $user = User::find($transaction->user_id);
-
-            if ($user) {
-                $user->deposit($transaction->amount, $data['order_id'], 'Поповнення через LiqPay');
-                $transaction->update(['status' => 'completed']);
-            }
-
-            Log::info('LiqPay: callback обработан', [
-                'order_id' => $data['order_id'],
-                'amount' => $transaction->amount,
-            ]);
-
+        // Просто проверяем статус
+        if ($data['status'] !== 'success') {
             return response()->json(['status' => 'ok']);
-
-        } catch (\Exception $e) {
-            Log::error('LiqPay: ошибка callback', [
-                'error' => $e->getMessage(),
-                'data' => $request->all(),
-            ]);
-
-            return response()->json(['error' => 'Internal server error'], 500);
         }
+
+        // Находим транзакцию
+        $transaction = Transaction::where('payment_id', $data['order_id'])->first();
+
+        if (!$transaction) {
+            return response()->json(['status' => 'ok']);
+        }
+
+        // Обновляем транзакцию
+        $transaction->update(['status' => 'completed']);
+        $user = User::find($transaction->user_id);
+        $user->deposit($transaction->amount, $data['order_id'], 'Поповнення через LiqPay');
+
+        return response()->json(['status' => 'ok']);
     }
 }
