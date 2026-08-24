@@ -35,12 +35,14 @@ class PaymentController extends Controller
 
             \Log::info('Step 1: User found', ['user_id' => $user->id]);
 
+            // 1. Создаём транзакцию и СРАЗУ передаём payment_id
             $transaction = Transaction::create([
                 'user_id' => $user->id,
                 'type' => 'deposit',
                 'amount' => $amount,
                 'balance_after' => $user->balance ?? 0,
                 'status' => 'pending',
+                'payment_id' => $orderId, // ВАЖНО: присваиваем ID заказа
                 'description' => 'Поповнення балансу через LiqPay',
             ]);
 
@@ -78,8 +80,8 @@ class PaymentController extends Controller
             }
 
             // Проверяем статус платежа
-            if ($data['status'] !== 'success') {
-                Log::warning('LiqPay: статус платежа не success', ['status' => $data['status']]);
+            if (!isset($data['status']) || $data['status'] !== 'success') {
+                Log::warning('LiqPay: статус платежа не success', ['status' => $data['status'] ?? 'unknown']);
                 return response()->json(['status' => 'ok']);
             }
 
@@ -87,7 +89,7 @@ class PaymentController extends Controller
             $transaction = Transaction::where('payment_id', $data['order_id'])->first();
 
             if (!$transaction) {
-                Log::warning('LiqPay: транзакция не найдена', ['order_id' => $data['order_id']]);
+                Log::warning('LiqPay: транзакция не найдена', ['order_id' => $data['order_id'] ?? 'null']);
                 return response()->json(['status' => 'ok']);
             }
 
