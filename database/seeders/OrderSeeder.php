@@ -11,8 +11,8 @@ class OrderSeeder extends Seeder
 {
     public function run(): void
     {
-        // Берём первого клиента (или создаём, если нет)
-        $client = User::where('role_id', 3)->first(); // role_id = 3 — клиент
+        // Если пользователь с ролью клиента уже есть — берём его
+        $client = User::where('role_id', 3)->first();
 
         if (!$client) {
             $client = User::factory()->create([
@@ -23,20 +23,21 @@ class OrderSeeder extends Seeder
             ]);
         }
 
-        // Получаем все теги
+        // Получаем теги
         $tags = Tag::all();
 
-        // Создаём 10 заявок
-        $orders = Order::factory()->count(10)->create([
-            'client_id' => $client->id,
-            'status' => 'new',
-            'worker_id' => null,
-        ]);
+        // Если заявок нет — создаём 10
+        if (Order::count() < 10) {
+            $orders = Order::factory()->count(10)->create([
+                'client_id' => $client->id,
+                'status' => 'new',
+                'worker_id' => null,
+            ]);
 
-        // Привязываем теги к заявкам
-        foreach ($orders as $order) {
-            $randomTags = $tags->random(rand(1, 3))->pluck('id')->toArray();
-            $order->tags()->attach($randomTags);
+            foreach ($orders as $order) {
+                $randomTags = $tags->random(rand(1, 3))->pluck('id')->toArray();
+                $order->tags()->attach($randomTags);
+            }
         }
     }
 }

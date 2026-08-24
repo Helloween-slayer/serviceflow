@@ -8,9 +8,6 @@ use App\Models\Role;
 
 class RoleSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $roles = [
@@ -20,7 +17,10 @@ class RoleSeeder extends Seeder
         ];
 
         foreach ($roles as $role) {
-            Role::create($role);
+            Role::firstOrCreate(
+                ['name' => $role['name']],
+                ['display_name' => $role['display_name']]
+            );
         }
     }
 }

@@ -2,24 +2,22 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Role;
+use App\Models\Tag;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Создаём роли автоматически (firstOrCreate - не дублирует)
+        Role::firstOrCreate(['name' => 'admin'], ['display_name' => 'Адміністратор']);
+        Role::firstOrCreate(['name' => 'worker'], ['display_name' => 'Виконавець']);
+        Role::firstOrCreate(['name' => 'client'], ['display_name' => 'Клієнт']);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Создаём теги автоматически
+        Tag::firstOrCreate(['name' => 'Програмування']);
+        Tag::firstOrCreate(['name' => 'Дизайн']);
+        Tag::firstOrCreate(['name' => 'Копірайтинг']);
     }
 }
