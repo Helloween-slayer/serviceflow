@@ -38,7 +38,8 @@ return [
     'liqpay' => [
         'public_key' => env('LIQPAY_PUBLIC_KEY'),
         'private_key' => env('LIQPAY_PRIVATE_KEY'),
-        'server_url' => env('LIQPAY_SERVER_URL'),
+        'server_url' => env('LIQPAY_SERVER_URL', 'https://serviceflow-production-64a7.up.railway.app/liqpay/callback'),
+        'result_url' => env('LIQPAY_RESULT_URL', 'https://serviceflow-production-64a7.up.railway.app/client/dashboard'),
     ],
 
 ];
