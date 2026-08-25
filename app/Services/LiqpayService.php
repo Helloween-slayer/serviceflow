@@ -38,10 +38,9 @@ class LiqpayService
             'description' => $description,
             'order_id' => $orderId,
             'server_url' => config('services.liqpay.server_url'),
-            'result_url' => route('client.dashboard'),
+            'result_url' => config('services.liqpay.result_url'), 
             'sandbox' => 1,
         ];
-
         $encodedData = base64_encode(json_encode($data));
         $signature = base64_encode(sha1($privateKey . $encodedData . $privateKey, 1));
 
