@@ -86,14 +86,18 @@ class PaymentController extends Controller
         // 4. Находим транзакцию
         $transaction = Transaction::where('payment_id', $data['order_id'])->first();
 
+        // 5. Если транзакция не найдена — возвращаем ok
         if (!$transaction) {
             return response()->json(['status' => 'ok']);
         }
 
-        // 5. Обновляем транзакцию
-        $transaction->update(['status' => 'completed']);
+        // 6. Если уже completed — НЕ списываем деньги повторно!
+        if ($transaction->status === 'completed') {
+            return response()->json(['status' => 'ok']);
+        }
 
-        // 6. Пополняем баланс
+        // 7. Обновляем транзакцию и пополняем баланс (один раз!)
+        $transaction->update(['status' => 'completed']);
         $user = User::find($transaction->user_id);
         if ($user) {
             $user->deposit($transaction->amount, $data['order_id'], 'Поповнення через LiqPay');
