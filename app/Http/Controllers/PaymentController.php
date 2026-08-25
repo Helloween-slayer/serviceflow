@@ -70,24 +70,34 @@ class PaymentController extends Controller
      */
     public function callback(Request $request)
     {
+        // 1. Получаем данные
         $data = $request->all();
 
-        // Просто проверяем статус
+        // 2. Если нет order_id — сразу возвращаем ok
+        if (!isset($data['order_id'])) {
+            return response()->json(['status' => 'ok']);
+        }
+
+        // 3. Проверяем статус
         if ($data['status'] !== 'success') {
             return response()->json(['status' => 'ok']);
         }
 
-        // Находим транзакцию
+        // 4. Находим транзакцию
         $transaction = Transaction::where('payment_id', $data['order_id'])->first();
 
         if (!$transaction) {
             return response()->json(['status' => 'ok']);
         }
 
-        // Обновляем транзакцию
+        // 5. Обновляем транзакцию
         $transaction->update(['status' => 'completed']);
+
+        // 6. Пополняем баланс
         $user = User::find($transaction->user_id);
-        $user->deposit($transaction->amount, $data['order_id'], 'Поповнення через LiqPay');
+        if ($user) {
+            $user->deposit($transaction->amount, $data['order_id'], 'Поповнення через LiqPay');
+        }
 
         return response()->json(['status' => 'ok']);
     }
