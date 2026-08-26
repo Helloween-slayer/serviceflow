@@ -69,7 +69,7 @@ class PaymentController extends Controller
      */
     public function callback(Request $request)
     {
-        // ✅ ДОБАВЛЕНО: логируем входящий запрос
+        // ДОБАВЛЕНО: логируем входящий запрос
         \Log::info('=== LIQPAY CALLBACK HIT ===', [
             'method' => $request->method(),
             'ip' => $request->ip(),
