@@ -273,7 +273,10 @@ import Modal from '@/Components/UI/Modal.vue';
 import Chat from '@/Components/Chat.vue';
 
 const props = defineProps({
-    order: Object,
+    order: {
+        type: Object,
+        required: true,
+    },
 });
 
 const { auth } = usePage().props;

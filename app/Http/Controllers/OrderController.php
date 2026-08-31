@@ -229,6 +229,14 @@ class OrderController extends Controller
      */
     public function show(Order $order)
     {
+        // ✅ ЛОГИРУЕМ ВХОДНЫЕ ДАННЫЕ
+        \Log::info('=== ORDER SHOW START ===');
+        \Log::info('Order ID from route:', [
+            'id' => $order->id,
+            'type' => gettype($order->id),
+            'order_object' => $order
+        ]);
+
         $order->load('tags', 'client', 'worker');
 
         $orderData = $order->toArray();
