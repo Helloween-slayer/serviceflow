@@ -16,6 +16,8 @@ class Order extends Model
         'worker_id',
         'title',
         'description',
+        'photos',
+        'files',
         'price',
         'status',
         'deadline'

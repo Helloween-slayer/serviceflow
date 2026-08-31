@@ -17,6 +17,8 @@ return new class extends Migration
             $table->foreignId('worker_id')->nullable()->constrained('users')->onDelete('set null');
             $table->string('title');
             $table->text('description')->nullable();
+            $table->json('photos')->nullable();
+            $table->json('files')->nullable();
             $table->decimal('price', 10, 2)->nullable();
             $table->string('status')->default('new'); // new, in_progress, ready, completed, cancelled
             $table->timestamp('deadline')->nullable();

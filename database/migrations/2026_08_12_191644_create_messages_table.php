@@ -16,6 +16,8 @@ return new class extends Migration
             $table->foreignId('order_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->text('message');
+            $table->json('files')->nullable();
+            $table->json('file_names')->nullable();
             $table->softDeletes();
             $table->timestamps();
         });

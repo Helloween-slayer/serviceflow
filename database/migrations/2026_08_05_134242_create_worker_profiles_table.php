@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('phone')->nullable();
             $table->string('location')->nullable();
             $table->string('avatar')->nullable();
+            $table->json('portfolio')->nullable();
             $table->decimal('rating', 3, 2)->default(0);
             $table->integer('completed_orders')->default(0);
             $table->boolean('is_verified')->default(false);
