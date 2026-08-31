@@ -232,8 +232,43 @@ class OrderController extends Controller
         $order->load('tags', 'client', 'worker');
 
         $orderData = $order->toArray();
-        $orderData['photos_urls'] = $order->photos_urls;
-        $orderData['files_urls'] = $order->files_urls;
+
+        // ✅ ПРИНУДИТЕЛЬНО декодируем JSON
+        $photos = [];
+        if (!empty($order->photos)) {
+            $decoded = json_decode($order->photos, true);
+            // Если после декодирования все еще строка — декодируем еще раз
+            if (is_string($decoded)) {
+                $decoded = json_decode($decoded, true);
+            }
+            $photos = is_array($decoded) ? $decoded : [];
+        }
+
+        $files = [];
+        if (!empty($order->files)) {
+            $decoded = json_decode($order->files, true);
+            if (is_string($decoded)) {
+                $decoded = json_decode($decoded, true);
+            }
+            $files = is_array($decoded) ? $decoded : [];
+        }
+
+        $orderData['photos_urls'] = !empty($photos) ? array_map(function ($path) {
+            return Storage::disk('s3')->url($path);
+        }, $photos) : [];
+
+        $orderData['files_urls'] = !empty($files) ? array_map(function ($path) {
+            return Storage::disk('s3')->url($path);
+        }, $files) : [];
+
+        \Log::info('Order Show Data:', [
+            'order_id' => $order->id,
+            'photos_raw' => $order->photos,
+            'photos_decoded' => $photos,
+            'files_decoded' => $files,
+            'photos_urls' => $orderData['photos_urls'],
+            'files_urls' => $orderData['files_urls'],
+        ]);
 
         return Inertia::render('Orders/Show', ['order' => $orderData]);
     }
