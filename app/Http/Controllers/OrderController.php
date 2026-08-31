@@ -181,6 +181,8 @@ class OrderController extends Controller
         \Log::info('=== ORDER STORE START ===');
         \Log::info('Request all:', $request->all());
         \Log::info('Request files:', array_keys($request->allFiles()));
+        \Log::info('Has photos: ' . ($request->hasFile('photos') ? 'YES' : 'NO'));
+        \Log::info('Has files: ' . ($request->hasFile('files') ? 'YES' : 'NO'));
 
         if ($request->price > 0 && !auth()->user()->hasBalance($request->price)) {
             return redirect()->route('client.dashboard')
@@ -191,25 +193,29 @@ class OrderController extends Controller
 
         $photoPaths = [];
         if ($request->hasFile('photos')) {
-            \Log::info('Has photos, count: ' . count($request->file('photos')));
+            \Log::info('Processing photos...');
             foreach ($request->file('photos') as $photo) {
-                $photoPaths[] = $photo->store('orders/photos', 's3');
+                $path = $photo->store('orders/photos', 's3');
+                $photoPaths[] = $path;
+                \Log::info('Photo saved to S3: ' . $path);
             }
         } else {
             \Log::info('No photos in request');
         }
-        $data['photos'] = !empty($photoPaths) ? $photoPaths : null;
+        $data['photos'] = !empty($photoPaths) ? json_encode($photoPaths) : null;
 
         $filePaths = [];
         if ($request->hasFile('files')) {
-            \Log::info('Has files, count: ' . count($request->file('files')));
+            \Log::info('Processing files...');
             foreach ($request->file('files') as $file) {
-                $filePaths[] = $file->store('orders/files', 's3');
+                $path = $file->store('orders/files', 's3');
+                $filePaths[] = $path;
+                \Log::info('File saved to S3: ' . $path);
             }
         } else {
             \Log::info('No files in request');
         }
-        $data['files'] = !empty($filePaths) ? $filePaths : null;
+        $data['files'] = !empty($filePaths) ? json_encode($filePaths) : null;
 
         \Log::info('Data before createOrder:', $data);
 
