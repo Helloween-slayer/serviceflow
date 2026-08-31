@@ -58,6 +58,36 @@ class Order extends Model
     {
         return $this->hasOne(Review::class);
     }
+
+    // ✅ Аксессор для photos как массив
+    public function getPhotosArrayAttribute(): array
+    {
+        return !empty($this->photos) ? json_decode($this->photos, true) : [];
+    }
+
+    // ✅ Аксессор для files как массив
+    public function getFilesArrayAttribute(): array
+    {
+        return !empty($this->files) ? json_decode($this->files, true) : [];
+    }
+
+    // ✅ Аксессор для URLs фото
+    public function getPhotosUrlsAttribute(): array
+    {
+        $photos = $this->photos_array;
+        return array_map(function ($path) {
+            return Storage::disk('s3')->url($path);
+        }, $photos);
+    }
+
+    // ✅ Аксессор для URLs файлов
+    public function getFilesUrlsAttribute(): array
+    {
+        $files = $this->files_array;
+        return array_map(function ($path) {
+            return Storage::disk('s3')->url($path);
+        }, $files);
+    }
 }
 
 

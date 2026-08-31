@@ -231,23 +231,10 @@ class OrderController extends Controller
     {
         $order->load('tags', 'client', 'worker');
 
-        // Добавляем URL для фото и файлов
+        // ✅ Используем аксессоры
         $orderData = $order->toArray();
-        $orderData['photos_urls'] = !empty($order->photos) ? array_map(function ($path) {
-            return Storage::disk('s3')->url($path);
-        }, $order->photos) : [];
-
-        $orderData['files_urls'] = !empty($order->files) ? array_map(function ($path) {
-            return Storage::disk('s3')->url($path);
-        }, $order->files) : [];
-
-        \Log::info('Order Show Data:', [
-            'order_id' => $order->id,
-            'photos' => $order->photos,
-            'files' => $order->files,
-            'photos_urls' => $orderData['photos_urls'],
-            'files_urls' => $orderData['files_urls'],
-        ]);
+        $orderData['photos_urls'] = $order->photos_urls;
+        $orderData['files_urls'] = $order->files_urls;
 
         return Inertia::render('Orders/Show', ['order' => $orderData]);
     }
@@ -265,15 +252,18 @@ class OrderController extends Controller
             return redirect()->route('client.orders.index')->with('error', 'Можна редагувати тільки нові заявки');
         }
 
-        // Добавляем URL для фото и файлов для Edit
         $orderData = $order->load('tags')->toArray();
-        $orderData['photos_urls'] = !empty($order->photos) ? array_map(function ($path) {
-            return Storage::disk('s3')->url($path);
-        }, $order->photos) : [];
 
-        $orderData['files_urls'] = !empty($order->files) ? array_map(function ($path) {
+        $photos = !empty($order->photos) ? json_decode($order->photos, true) : [];
+        $files = !empty($order->files) ? json_decode($order->files, true) : [];
+
+        $orderData['photos_urls'] = !empty($photos) ? array_map(function ($path) {
             return Storage::disk('s3')->url($path);
-        }, $order->files) : [];
+        }, $photos) : [];
+
+        $orderData['files_urls'] = !empty($files) ? array_map(function ($path) {
+            return Storage::disk('s3')->url($path);
+        }, $files) : [];
 
         return Inertia::render('Client/Orders/Edit', [
             'order' => $orderData,
