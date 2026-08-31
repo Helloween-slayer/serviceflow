@@ -95,8 +95,8 @@ class OrderService
             'price' => $data['price'] ?? null,
             'deadline' => $data['deadline'] ?? null,
             'status' => Order::STATUS_NEW,
-            'photos' => $data['photos'] ?? null,
-            'files' => $data['files'] ?? null,
+            'photos' => !empty($data['photos']) ? json_encode($data['photos']) : null,
+            'files' => !empty($data['files']) ? json_encode($data['files']) : null,
         ]);
 
         if (!empty($data['tags'])) {
