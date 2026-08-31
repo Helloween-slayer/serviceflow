@@ -5,12 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
-
-
+use Illuminate\Support\Facades\Storage;
 
 class Order extends Model
 {
-    use HasFactory , SoftDeletes;
+    use HasFactory, SoftDeletes;
+
     protected $fillable = [
         'client_id',
         'worker_id',
@@ -22,6 +22,15 @@ class Order extends Model
         'status',
         'deadline'
     ];
+
+    // ❌ УБЕРИ ЭТОТ БЛОК! Он конфликтует с аксессорами
+    // protected function casts(): array
+    // {
+    //     return [
+    //         'photos' => 'array',
+    //         'files' => 'array',
+    //     ];
+    // }
 
     const STATUS_NEW = 'new';
     const STATUS_IN_PROGRESS = 'in_progress';
@@ -59,16 +68,36 @@ class Order extends Model
         return $this->hasOne(Review::class);
     }
 
-    // ✅ Аксессор для photos как массив
+    // ✅ Аксессор для photos как массив (с двойным декодированием)
     public function getPhotosArrayAttribute(): array
     {
-        return !empty($this->photos) ? json_decode($this->photos, true) : [];
+        if (empty($this->photos)) {
+            return [];
+        }
+
+        $decoded = json_decode($this->photos, true);
+
+        if (is_string($decoded)) {
+            $decoded = json_decode($decoded, true);
+        }
+
+        return is_array($decoded) ? $decoded : [];
     }
 
-    // ✅ Аксессор для files как массив
+    // ✅ Аксессор для files как массив (с двойным декодированием)
     public function getFilesArrayAttribute(): array
     {
-        return !empty($this->files) ? json_decode($this->files, true) : [];
+        if (empty($this->files)) {
+            return [];
+        }
+
+        $decoded = json_decode($this->files, true);
+
+        if (is_string($decoded)) {
+            $decoded = json_decode($decoded, true);
+        }
+
+        return is_array($decoded) ? $decoded : [];
     }
 
     // ✅ Аксессор для URLs фото
@@ -89,5 +118,3 @@ class Order extends Model
         }, $files);
     }
 }
-
-

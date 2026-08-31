@@ -231,7 +231,6 @@ class OrderController extends Controller
     {
         $order->load('tags', 'client', 'worker');
 
-        // ✅ Используем аксессоры
         $orderData = $order->toArray();
         $orderData['photos_urls'] = $order->photos_urls;
         $orderData['files_urls'] = $order->files_urls;
