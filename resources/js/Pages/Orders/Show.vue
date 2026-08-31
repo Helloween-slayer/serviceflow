@@ -43,7 +43,6 @@
                         <span class="font-semibold">Email клієнта:</span>
                         {{ order.client?.email || 'Не вказано' }}
                     </p>
-                    <!-- 👇 ССЫЛКА НА ПРОФИЛЬ ВОРКЕРА -->
                     <p class="text-gray-600 mt-2">
                         <span class="font-semibold">Виконавець:</span>
                         <span v-if="order.worker">
@@ -53,7 +52,6 @@
                         </span>
                         <span v-else>Не призначений</span>
                     </p>
-                    <!-- ========================================== -->
                     <p class="text-gray-600 mt-2">
                         <span class="font-semibold">Створено:</span>
                         {{ new Date(order.created_at).toLocaleDateString() }}
@@ -61,9 +59,69 @@
                 </div>
             </div>
 
+            <!-- ============================================= -->
+            <!-- ✅ ФОТО ЗАЯВКИ -->
+            <!-- ============================================= -->
+            <div v-if="order.photos && order.photos.length > 0" class="mb-6">
+                <h3 class="font-semibold text-gray-700 mb-3">📸 Фото заявки:</h3>
+                <div class="flex flex-wrap gap-3">
+                    <div
+                        v-for="(photo, index) in order.photos"
+                        :key="'photo-' + index"
+                        class="relative w-32 h-32 rounded-lg overflow-hidden border border-gray-200 hover:shadow-md transition cursor-pointer"
+                        @click="openPhotoModal(index)"
+                    >
+                        <img
+                            :src="getPhotoUrl(photo, index)"
+                            :alt="'Фото ' + (index + 1)"
+                            class="w-full h-full object-cover"
+                            @error="handleImageError"
+                        />
+                        <div class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs text-center py-0.5 truncate px-1">
+                            {{ getFileName(photo) }}
+                        </div>
+                        <div class="absolute top-1 right-1 bg-black/50 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-black/70 transition">
+                            🔍
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================= -->
+            <!-- ✅ ФАЙЛЫ ЗАЯВКИ -->
+            <!-- ============================================= -->
+            <div v-if="order.files && order.files.length > 0" class="mb-6">
+                <h3 class="font-semibold text-gray-700 mb-3">📎 Додаткові файли:</h3>
+                <div class="flex flex-wrap gap-2">
+                    <div
+                        v-for="(file, index) in order.files"
+                        :key="'file-' + index"
+                        class="flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-200 transition"
+                    >
+                        <span class="text-lg">📄</span>
+                        <a
+                            :href="getFileUrl(file, index)"
+                            target="_blank"
+                            class="text-sm text-blue-600 hover:underline"
+                        >
+                            {{ getFileName(file) }}
+                        </a>
+                        <span class="text-xs text-gray-400">|</span>
+                        <a
+                            :href="getFileUrl(file, index)"
+                            target="_blank"
+                            class="text-xs text-blue-500 hover:text-blue-700"
+                            title="Завантажити"
+                        >
+                            ⬇️
+                        </a>
+                    </div>
+                </div>
+            </div>
+
             <!-- Теги -->
             <div v-if="order.tags && order.tags.length" class="mb-6">
-                <h3 class="font-semibold text-gray-700 mb-2">Теги:</h3>
+                <h3 class="font-semibold text-gray-700 mb-2">🏷️ Теги:</h3>
                 <div class="flex gap-2 flex-wrap">
                     <Badge v-for="tag in order.tags" :key="tag.id" variant="gray">
                         {{ tag.name }}
@@ -79,10 +137,9 @@
             </div>
 
             <!-- ========================================== -->
-            <!-- 👇 КНОПКИ С ПРАВИЛЬНЫМИ УСЛОВИЯМИ -->
+            <!-- 👇 КНОПКИ -->
             <!-- ========================================== -->
             <div class="flex flex-wrap gap-3 mt-6 pt-6 border-t border-gray-200">
-                <!-- Взять в работу (только воркер) -->
                 <Button
                     v-if="canTakeOrder"
                     variant="success"
@@ -92,7 +149,6 @@
                     📋 Взяти в роботу
                 </Button>
 
-                <!-- Завершить (только воркер, который взял) -->
                 <Button
                     v-if="canCompleteOrder"
                     variant="primary"
@@ -102,7 +158,6 @@
                     ✅ Завершити
                 </Button>
 
-                <!-- Отменить (только воркер, который взял) -->
                 <Button
                     v-if="canCancelOrder"
                     variant="danger"
@@ -112,12 +167,10 @@
                     ❌ Скасувати
                 </Button>
 
-                <!-- Редактировать (только клиент-владелец, статус new) -->
                 <Link v-if="canEditOrder" :href="route('client.orders.edit', order.id)">
                     <Button variant="secondary">✏️ Редагувати</Button>
                 </Link>
 
-                <!-- Удалить (только клиент-владелец, статус new) -->
                 <Button
                     v-if="canDeleteOrder"
                     variant="danger"
@@ -126,7 +179,6 @@
                     🗑️ Видалити
                 </Button>
 
-                <!-- Залишити відгук (только клиент, заявка завершена, нет отзыва) -->
                 <Link v-if="canLeaveReview" :href="route('client.reviews.create', order.id)">
                     <Button variant="primary">⭐ Залишити відгук</Button>
                 </Link>
@@ -142,7 +194,52 @@
         </div>
     </AppLayout>
 
-    <!-- Модалка подтверждения удаления -->
+    <!-- ============================================= -->
+    <!-- ✅ МОДАЛКА ДЛЯ ПРОСМОТРА ФОТО -->
+    <!-- ============================================= -->
+    <Modal :show="photoModal.show" @close="closePhotoModal">
+        <div class="p-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">
+                    Фото {{ photoModal.index + 1 }} з {{ order.photos?.length || 0 }}
+                </h3>
+                <button
+                    @click="closePhotoModal"
+                    class="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                    ✕
+                </button>
+            </div>
+            <div class="flex justify-center">
+                <img
+                    :src="photoModal.url"
+                    alt="Фото заявки"
+                    class="max-w-full max-h-[70vh] object-contain rounded-lg"
+                    @error="handleImageError"
+                />
+            </div>
+            <div class="flex justify-center gap-4 mt-4">
+                <button
+                    @click="prevPhoto"
+                    :disabled="photoModal.index === 0"
+                    class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+                >
+                    ← Попереднє
+                </button>
+                <button
+                    @click="nextPhoto"
+                    :disabled="photoModal.index >= (order.photos?.length || 0) - 1"
+                    class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+                >
+                    Наступне →
+                </button>
+            </div>
+        </div>
+    </Modal>
+
+    <!-- ============================================= -->
+    <!-- ✅ МОДАЛКА ПОДТВЕРЖДЕНИЯ УДАЛЕНИЯ -->
+    <!-- ============================================= -->
     <Modal :show="showDeleteModal" @close="closeDeleteModal">
         <div class="p-6">
             <div class="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full">
@@ -194,46 +291,46 @@ const cancellingOrder = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');
 
+const photoModal = ref({
+    show: false,
+    index: 0,
+    url: '',
+});
+
 // ==============================================
 // 👇 ПРОВЕРКА ПРАВ
 // ==============================================
 
-// Может ли воркер взять заявку?
 const canTakeOrder = computed(() => {
     return user?.role_id === 2
         && props.order.status === 'new'
         && props.order.worker_id === null;
 });
 
-// Может ли воркер завершить заявку?
 const canCompleteOrder = computed(() => {
     return user?.role_id === 2
         && props.order.status === 'in_progress'
         && props.order.worker_id === user?.id;
 });
 
-// Может ли воркер отменить заявку?
 const canCancelOrder = computed(() => {
     return user?.role_id === 2
         && props.order.status === 'in_progress'
         && props.order.worker_id === user?.id;
 });
 
-// Может ли клиент редактировать заявку?
 const canEditOrder = computed(() => {
     return user?.role_id === 3
         && props.order.client_id === user?.id
         && props.order.status === 'new';
 });
 
-// Может ли клиент удалить заявку?
 const canDeleteOrder = computed(() => {
     return user?.role_id === 3
         && props.order.client_id === user?.id
         && props.order.status === 'new';
 });
 
-// Может ли клиент оставить отзыв?
 const canLeaveReview = computed(() => {
     return user?.role_id === 3
         && props.order.client_id === user?.id
@@ -242,26 +339,89 @@ const canLeaveReview = computed(() => {
 });
 
 // ==============================================
-// 👇 ЧАТ ДОСТУПЕН ТОЛЬКО УЧАСТНИКАМ
+// 👇 ЧАТ
 // ==============================================
 
 const canViewChat = computed(() => {
     const userId = user?.id;
     const isAdmin = user?.role_id === 1;
 
-    // Если заявка не взята — чат недоступен
     if (props.order.worker_id === null) {
         return false;
     }
 
-    // Если заявка взята — чат видят: клиент, воркер, админ
     return props.order.client_id === userId
         || props.order.worker_id === userId
         || isAdmin;
 });
 
 // ==============================================
-// 👇 ХЕЛПЕРЫ
+// 👇 ХЕЛПЕРЫ ДЛЯ ФАЙЛОВ
+// ==============================================
+
+const getFileName = (path) => {
+    if (!path) return '';
+    return path.split('/').pop();
+};
+
+const getPhotoUrl = (path, index) => {
+    if (!path) return '';
+    // Если есть photos_urls — используем их
+    if (props.order.photos_urls && props.order.photos_urls[index]) {
+        return props.order.photos_urls[index];
+    }
+    return path;
+};
+
+const getFileUrl = (path, index) => {
+    if (!path) return '';
+    if (props.order.files_urls && props.order.files_urls[index]) {
+        return props.order.files_urls[index];
+    }
+    return path;
+};
+
+const handleImageError = (event) => {
+    event.target.src = '/images/placeholder-image.png';
+    event.target.onerror = null;
+};
+
+// ==============================================
+// 👇 МОДАЛКА ДЛЯ ФОТО
+// ==============================================
+
+const openPhotoModal = (index) => {
+    const photos = props.order.photos || [];
+    const urls = props.order.photos_urls || [];
+
+    if (index >= 0 && index < photos.length) {
+        photoModal.value = {
+            show: true,
+            index: index,
+            url: urls[index] || photos[index],
+        };
+    }
+};
+
+const closePhotoModal = () => {
+    photoModal.value.show = false;
+};
+
+const nextPhoto = () => {
+    const photos = props.order.photos || [];
+    if (photoModal.value.index < photos.length - 1) {
+        openPhotoModal(photoModal.value.index + 1);
+    }
+};
+
+const prevPhoto = () => {
+    if (photoModal.value.index > 0) {
+        openPhotoModal(photoModal.value.index - 1);
+    }
+};
+
+// ==============================================
+// 👇 СТАТУСЫ
 // ==============================================
 
 const getStatusText = (status) => {

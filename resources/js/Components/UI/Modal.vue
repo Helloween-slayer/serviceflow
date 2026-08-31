@@ -11,3 +11,18 @@
         </div>
     </div>
 </template>
+
+<script setup>
+defineProps({
+    show: {
+        type: Boolean,
+        default: false,
+    },
+});
+
+const emit = defineEmits(['close']);
+
+const close = () => {
+    emit('close');
+};
+</script>

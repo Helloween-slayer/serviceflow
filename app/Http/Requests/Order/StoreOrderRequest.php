@@ -29,6 +29,8 @@ class StoreOrderRequest extends FormRequest
         'deadline' => 'nullable|date',
         'tags' => 'nullable|array',
         'tags.*' => 'exists:tags,id',
+        'photos.*' => 'nullable|file|max:10240|mimes:jpg,jpeg,png,webp',
+        'files.*' => 'nullable|file|max:10240|mimes:pdf,doc,docx,jpg,png,zip',
     ];
     }
 }

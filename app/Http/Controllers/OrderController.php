@@ -13,6 +13,7 @@ use App\Services\OrderService;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class OrderController extends Controller
@@ -89,15 +90,12 @@ class OrderController extends Controller
      */
     public function takeOrder(Order $order, TakeOrderAction $action)
     {
-        //  Проверяем права
         Gate::authorize('take', $order);
 
-        //  Проверяем, что заявка доступна
         if ($order->status !== 'new' || $order->worker_id !== null) {
             return redirect()->back()->with('error', 'Ця заявка вже не доступна.');
         }
 
-        //  Получаем клиента и проверяем баланс
         $client = $order->client;
         $price = $order->price ?? 0;
 
@@ -105,7 +103,6 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'У клієнта недостатньо коштів для оплати заявки.');
         }
 
-        //  Если цена > 0 — списываем с клиента
         if ($price > 0) {
             $client->withdraw($price, $order->id, "Оплата заявки #{$order->id}");
         }
@@ -122,16 +119,13 @@ class OrderController extends Controller
     {
         Gate::authorize('complete', $order);
 
-        // Перевіряємо, що заявка в роботі у цього воркера
         if ($order->status !== 'in_progress' || $order->worker_id !== auth()->id()) {
             return redirect()->back()->with('error', 'Ви не можете завершити цю заявку.');
         }
 
-        //  Получаем воркера и сумму
         $worker = $order->worker;
         $price = $order->price ?? 0;
 
-        //  Если цена > 0 — зачисляем воркеру
         if ($price > 0 && $worker) {
             $worker->deposit($price, null, "Оплата заявки #{$order->id}");
         }
@@ -148,17 +142,14 @@ class OrderController extends Controller
     {
         Gate::authorize('cancel', $order);
 
-        // Перевіряємо, що заявка в роботі у цього воркера
         if ($order->status !== 'in_progress' || $order->worker_id !== auth()->id()) {
             return redirect()->back()->with('error', 'Ви не можете скасувати цю заявку.');
         }
 
-        //  Возвращаем деньги клиенту
         $client = $order->client;
         $price = $order->price ?? 0;
 
         if ($price > 0 && $client) {
-            // Проверяем, была ли уже списана сумма
             $transaction = Transaction::where('order_id', $order->id)
                 ->where('type', 'hold')
                 ->where('status', 'completed')
@@ -187,12 +178,42 @@ class OrderController extends Controller
      */
     public function store(StoreOrderRequest $request)
     {
+        \Log::info('=== ORDER STORE START ===');
+        \Log::info('Request all:', $request->all());
+        \Log::info('Request files:', array_keys($request->allFiles()));
+
         if ($request->price > 0 && !auth()->user()->hasBalance($request->price)) {
             return redirect()->route('client.dashboard')
                 ->with('error', 'Поповніть баланс перед створенням заявки');
         }
 
-        $order = $this->orderService->createOrder($request->validated());
+        $data = $request->validated();
+
+        $photoPaths = [];
+        if ($request->hasFile('photos')) {
+            \Log::info('Has photos, count: ' . count($request->file('photos')));
+            foreach ($request->file('photos') as $photo) {
+                $photoPaths[] = $photo->store('orders/photos', 's3');
+            }
+        } else {
+            \Log::info('No photos in request');
+        }
+        $data['photos'] = !empty($photoPaths) ? $photoPaths : null;
+
+        $filePaths = [];
+        if ($request->hasFile('files')) {
+            \Log::info('Has files, count: ' . count($request->file('files')));
+            foreach ($request->file('files') as $file) {
+                $filePaths[] = $file->store('orders/files', 's3');
+            }
+        } else {
+            \Log::info('No files in request');
+        }
+        $data['files'] = !empty($filePaths) ? $filePaths : null;
+
+        \Log::info('Data before createOrder:', $data);
+
+        $order = $this->orderService->createOrder($data);
 
         return redirect()->route('client.orders.index')->with('success', 'Заявка створена');
     }
@@ -203,7 +224,26 @@ class OrderController extends Controller
     public function show(Order $order)
     {
         $order->load('tags', 'client', 'worker');
-        return Inertia::render('Orders/Show', ['order' => $order]);
+
+        // Добавляем URL для фото и файлов
+        $orderData = $order->toArray();
+        $orderData['photos_urls'] = !empty($order->photos) ? array_map(function ($path) {
+            return Storage::disk('s3')->url($path);
+        }, $order->photos) : [];
+
+        $orderData['files_urls'] = !empty($order->files) ? array_map(function ($path) {
+            return Storage::disk('s3')->url($path);
+        }, $order->files) : [];
+
+        \Log::info('Order Show Data:', [
+            'order_id' => $order->id,
+            'photos' => $order->photos,
+            'files' => $order->files,
+            'photos_urls' => $orderData['photos_urls'],
+            'files_urls' => $orderData['files_urls'],
+        ]);
+
+        return Inertia::render('Orders/Show', ['order' => $orderData]);
     }
 
     /**
@@ -211,7 +251,6 @@ class OrderController extends Controller
      */
     public function edit(Order $order)
     {
-        // Перевіряємо, чи може клієнт редагувати цю заявку
         if (auth()->user()->role_id !== 3 || $order->client_id !== auth()->id()) {
             abort(403, 'Ви не можете редагувати цю заявку.');
         }
@@ -220,8 +259,18 @@ class OrderController extends Controller
             return redirect()->route('client.orders.index')->with('error', 'Можна редагувати тільки нові заявки');
         }
 
+        // Добавляем URL для фото и файлов для Edit
+        $orderData = $order->load('tags')->toArray();
+        $orderData['photos_urls'] = !empty($order->photos) ? array_map(function ($path) {
+            return Storage::disk('s3')->url($path);
+        }, $order->photos) : [];
+
+        $orderData['files_urls'] = !empty($order->files) ? array_map(function ($path) {
+            return Storage::disk('s3')->url($path);
+        }, $order->files) : [];
+
         return Inertia::render('Client/Orders/Edit', [
-            'order' => $order->load('tags'),
+            'order' => $orderData,
             'tags' => Tag::all(),
         ]);
     }
@@ -231,7 +280,42 @@ class OrderController extends Controller
      */
     public function update(UpdateOrderRequest $request, Order $order)
     {
-        $this->orderService->updateOrder($order, $request->validated());
+        $data = $request->validated();
+
+        // ОБНОВЛЯЕМ ФОТО (добавляем новые к существующим)
+        $existingPhotos = $order->photos ?? [];
+        if ($request->hasFile('photos')) {
+            foreach ($request->file('photos') as $photo) {
+                $existingPhotos[] = $photo->store('orders/photos', 's3');
+            }
+        }
+        $data['photos'] = $existingPhotos;
+
+        // ОБНОВЛЯЕМ ФАЙЛЫ (добавляем новые к существующим)
+        $existingFiles = $order->files ?? [];
+        if ($request->hasFile('files')) {
+            foreach ($request->file('files') as $file) {
+                $existingFiles[] = $file->store('orders/files', 's3');
+            }
+        }
+        $data['files'] = $existingFiles;
+
+        // Удаляем файлы, которые отмечены для удаления
+        if ($request->has('removed_files')) {
+            $removedFiles = $request->input('removed_files');
+            foreach ($removedFiles as $path) {
+                Storage::disk('s3')->delete($path);
+                $data['files'] = array_values(array_diff($data['files'], [$path]));
+            }
+        }
+
+        \Log::info('Order updated with files:', [
+            'order_id' => $order->id,
+            'photos' => $data['photos'],
+            'files' => $data['files'],
+        ]);
+
+        $this->orderService->updateOrder($order, $data);
 
         return redirect()->route('client.orders.index')->with('success', 'Заявка оновлена');
     }
@@ -241,7 +325,6 @@ class OrderController extends Controller
      */
     public function destroy(Order $order)
     {
-        // Перевіряємо, чи може клієнт видалити цю заявку
         if (auth()->user()->role_id !== 3 || $order->client_id !== auth()->id()) {
             abort(403, 'Ви не можете видалити цю заявку.');
         }
@@ -251,6 +334,20 @@ class OrderController extends Controller
         }
 
         try {
+            // Удаляем все фото из S3
+            if (!empty($order->photos)) {
+                foreach ($order->photos as $photo) {
+                    Storage::disk('s3')->delete($photo);
+                }
+            }
+
+            // Удаляем все файлы из S3
+            if (!empty($order->files)) {
+                foreach ($order->files as $file) {
+                    Storage::disk('s3')->delete($file);
+                }
+            }
+
             $order->delete();
             return redirect()->route('orders.index')->with('success', 'Заявку успішно видалено');
         } catch (\Exception $e) {

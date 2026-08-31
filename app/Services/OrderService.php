@@ -95,6 +95,8 @@ class OrderService
             'price' => $data['price'] ?? null,
             'deadline' => $data['deadline'] ?? null,
             'status' => Order::STATUS_NEW,
+            'photos' => $data['photos'] ?? null,
+            'files' => $data['files'] ?? null,
         ]);
 
         if (!empty($data['tags'])) {
