@@ -68,6 +68,17 @@
                 </Card>
             </div>
 
+            <!-- 👇 ССЫЛКА НА ПРОФИЛЬ - ВЫНЕСЕНА ОТДЕЛЬНО -->
+            <div class="mt-6 flex justify-end">
+                <Link
+                    :href="route('worker.profile.show', user.id)"
+                    class="inline-flex items-center gap-2 text-sm text-blue-600 font-medium hover:text-blue-800 hover:underline bg-blue-50 px-4 py-2 rounded-lg transition"
+                >
+                    👤 Мій профіль
+                    <span class="text-xs">→</span>
+                </Link>
+            </div>
+
             <!-- Telegram виджет -->
             <div class="mt-8">
                 <TelegramWidget />
@@ -83,6 +94,6 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import Card from '@/Components/UI/Card.vue';
 import TelegramWidget from '@/Components/Dashboard/TelegramWidget.vue';
 
-const { reviewsCount } = usePage().props;
-
+const { auth, reviewsCount } = usePage().props;
+const user = auth.user;
 </script>
