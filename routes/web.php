@@ -24,8 +24,7 @@ Route::get('/', function () {
 });
 
 // ========== ПУБЛІЧНИЙ ПРОФІЛЬ ВОРКЕРА (доступен всем) ==========
-Route::get('/worker/{userId}/profile', [WorkerProfileController::class, 'show'])
-    ->name('worker.profile.show');
+Route::get('/worker/{userId}/profile', [WorkerProfileController::class, 'show'])->name('worker.profile.show');
 
 // ========== ДАШБОРД ==========
 Route::get('/dashboard', function () {

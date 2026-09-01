@@ -1,196 +1,230 @@
 <template>
     <AppLayout>
-        <div class="max-w-3xl mx-auto">
-            <div class="mb-8">
-                <h1 class="text-2xl font-bold text-gray-900">✏️ Редагувати профіль</h1>
-                <p class="text-gray-600 mt-1">Заповніть інформацію про себе</p>
+        <div class="max-w-4xl mx-auto">
+            <!-- Заголовок -->
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-gray-900">✏️ Редагування профілю</h1>
+                <p class="text-gray-600 mt-1">Оновіть інформацію про себе</p>
             </div>
 
-            <!-- Flash-сообщения -->
-            <div v-if="$page.props.flash?.success" class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
-                {{ $page.props.flash.success }}
-            </div>
-            <div v-if="$page.props.flash?.error" class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-                {{ $page.props.flash.error }}
-            </div>
-
-            <form @submit.prevent="submit" enctype="multipart/form-data" class="space-y-6">
-                <!-- ============================================= -->
-                <!-- ✅ АВАТАР (С ЗАГРУЗКОЙ) -->
-                <!-- ============================================= -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Аватар</label>
+            <!-- Форма -->
+            <form @submit.prevent="submit" class="space-y-6">
+                <!-- Аватар -->
+                <Card>
+                    <template #header>
+                        <div class="flex items-center gap-2 text-blue-600">
+                            <span class="text-xl">🖼️</span>
+                            <span class="font-semibold">Аватар</span>
+                        </div>
+                    </template>
                     <div class="flex items-center gap-6">
-                        <!-- Превью аватара -->
-                        <div class="relative">
-                            <div class="w-24 h-24 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center border-2 border-gray-300">
+                        <div class="flex-shrink-0">
+                            <div class="w-24 h-24 rounded-full overflow-hidden bg-gray-100 border-2 border-gray-200">
                                 <img
-                                    v-if="form.avatarPreview"
-                                    :src="form.avatarPreview"
+                                    v-if="avatarPreview || profile.avatar_url"
+                                    :src="avatarPreview || profile.avatar_url"
+                                    alt="Аватар"
                                     class="w-full h-full object-cover"
+                                    @error="handleAvatarError"
                                 />
-                                <img
-                                    v-else-if="profile.avatar_url"
-                                    :src="profile.avatar_url"
-                                    class="w-full h-full object-cover"
-                                />
-                                <span v-else class="text-4xl text-gray-400">
-                                    {{ user.name.charAt(0).toUpperCase() }}
-                                </span>
-                            </div>
-                            <!-- Индикатор загрузки -->
-                            <div v-if="uploadingAvatar" class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                                <Loader />
+                                <div v-else class="w-full h-full flex items-center justify-center text-4xl text-gray-400 bg-gray-50">
+                                    {{ getInitials(user.name) }}
+                                </div>
                             </div>
                         </div>
-
-                        <!-- Кнопка загрузки -->
-                        <div>
-                            <label class="cursor-pointer inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition text-sm">
+                        <div class="flex-1">
+                            <input
+                                type="file"
+                                ref="avatarInput"
+                                @change="handleAvatarUpload"
+                                accept="image/jpeg,image/png,image/webp"
+                                class="hidden"
+                            />
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                @click="avatarInput.click()"
+                            >
                                 📤 Завантажити аватар
-                                <input
-                                    type="file"
-                                    @change="handleAvatarUpload"
-                                    accept="image/*"
-                                    class="hidden"
-                                />
-                            </label>
-                            <p class="text-xs text-gray-400 mt-1">JPG, PNG, WEBP (макс. 2MB)</p>
-                            <p v-if="form.errors.avatar" class="text-red-500 text-sm mt-1">
-                                {{ form.errors.avatar }}
-                            </p>
+                            </Button>
+                            <p class="text-xs text-gray-400 mt-1">Максимум 2MB. JPG, PNG, WEBP</p>
+                            <button
+                                v-if="profile.avatar || avatarPreview"
+                                type="button"
+                                @click="removeAvatar"
+                                class="text-sm text-red-500 hover:text-red-700 mt-1"
+                            >
+                                🗑️ Видалити аватар
+                            </button>
                         </div>
                     </div>
-                </div>
+                </Card>
 
-                <!-- ============================================= -->
-                <!-- ✅ ПОРТФОЛИО (МНОЖЕСТВЕННАЯ ЗАГРУЗКА) -->
-                <!-- ============================================= -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Портфоліо</label>
+                <!-- Основная информация -->
+                <Card>
+                    <template #header>
+                        <div class="flex items-center gap-2 text-green-600">
+                            <span class="text-xl">📝</span>
+                            <span class="font-semibold">Основна інформація</span>
+                        </div>
+                    </template>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Біографія
+                            </label>
+                            <textarea
+                                v-model="form.bio"
+                                rows="4"
+                                class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                placeholder="Розкажіть про себе..."
+                            ></textarea>
+                            <p class="text-xs text-gray-400 mt-1">Максимум 5000 символів</p>
+                        </div>
 
-                    <!-- Кнопка загрузки -->
-                    <label class="cursor-pointer inline-block bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 transition text-sm">
-                        📎 Додати файли
-                        <input
-                            type="file"
-                            @change="handlePortfolioUpload"
-                            multiple
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip"
-                            class="hidden"
-                        />
-                    </label>
-                    <p class="text-xs text-gray-400 mt-1">PDF, DOC, JPG, PNG, ZIP (макс. 10MB каждый, до 5 файлов)</p>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Навички
+                            </label>
+                            <textarea
+                                v-model="form.skills"
+                                rows="3"
+                                class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                placeholder="Наприклад: PHP, Laravel, Vue.js, React..."
+                            ></textarea>
+                            <p class="text-xs text-gray-400 mt-1">Максимум 1000 символів</p>
+                        </div>
 
-                    <!-- Список новых файлов (еще не загруженных) -->
-                    <div v-if="form.portfolio.length > 0" class="mt-3 space-y-2">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Досвід роботи
+                            </label>
+                            <textarea
+                                v-model="form.experience"
+                                rows="3"
+                                class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                placeholder="Розкажіть про ваш досвід..."
+                            ></textarea>
+                            <p class="text-xs text-gray-400 mt-1">Максимум 5000 символів</p>
+                        </div>
+                    </div>
+                </Card>
+
+                <!-- Контактная информация -->
+                <Card>
+                    <template #header>
+                        <div class="flex items-center gap-2 text-purple-600">
+                            <span class="text-xl">📞</span>
+                            <span class="font-semibold">Контактна інформація</span>
+                        </div>
+                    </template>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Компанія
+                            </label>
+                            <input
+                                v-model="form.company"
+                                type="text"
+                                class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                placeholder="Назва компанії"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Телефон
+                            </label>
+                            <input
+                                v-model="form.phone"
+                                type="text"
+                                class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                placeholder="+380 XX XXX XX XX"
+                            />
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Розташування
+                            </label>
+                            <input
+                                v-model="form.location"
+                                type="text"
+                                class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                placeholder="Київ, Україна"
+                            />
+                        </div>
+                    </div>
+                </Card>
+
+                <!-- Портфолио -->
+                <Card>
+                    <template #header>
+                        <div class="flex items-center gap-2 text-yellow-600">
+                            <span class="text-xl">💼</span>
+                            <span class="font-semibold">Портфоліо</span>
+                            <span class="text-sm text-gray-400">({{ portfolioFiles.length }} файлів)</span>
+                        </div>
+                    </template>
+
+                    <!-- Существующие файлы -->
+                    <div v-if="portfolioFiles.length > 0" class="grid grid-cols-3 gap-4 mb-4">
                         <div
-                            v-for="(file, index) in form.portfolio"
-                            :key="'new-' + index"
-                            class="flex items-center justify-between bg-gray-50 px-3 py-2 rounded border border-gray-200"
+                            v-for="(file, index) in portfolioFiles"
+                            :key="index"
+                            class="relative group"
                         >
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm">📎 {{ file.name }}</span>
-                                <span class="text-xs text-gray-400">({{ formatFileSize(file.size) }})</span>
+                            <div class="aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                                <img
+                                    v-if="isImage(file)"
+                                    :src="file.url"
+                                    :alt="'Портфоліо ' + (index + 1)"
+                                    class="w-full h-full object-cover"
+                                />
+                                <div v-else class="w-full h-full flex items-center justify-center">
+                                    <span class="text-3xl">📄</span>
+                                </div>
                             </div>
                             <button
                                 type="button"
-                                @click="removePortfolio(index)"
-                                class="text-red-500 hover:text-red-700 text-sm"
+                                @click="removePortfolioFile(index)"
+                                class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 transition opacity-0 group-hover:opacity-100"
                             >
                                 ✕
                             </button>
                         </div>
                     </div>
 
-                    <!-- Список уже загруженных файлов -->
-                    <div v-if="profile.portfolio && profile.portfolio.length > 0" class="mt-3 space-y-2">
-                        <div class="text-sm text-gray-500 mb-1">Завантажені файли:</div>
-                        <div
-                            v-for="(file, index) in profile.portfolio"
-                            :key="'old-' + index"
-                            class="flex items-center justify-between bg-green-50 px-3 py-2 rounded border border-green-200"
+                    <!-- Загрузка новых файлов -->
+                    <div>
+                        <input
+                            type="file"
+                            ref="portfolioInput"
+                            @change="handlePortfolioUpload"
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip"
+                            multiple
+                            class="hidden"
+                        />
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            @click="portfolioInput.click()"
+                            :disabled="portfolioFiles.length >= 5"
                         >
-                            <a
-                                :href="profile.portfolio_urls[index]"
-                                target="_blank"
-                                class="text-sm text-blue-600 hover:underline flex items-center gap-2"
-                            >
-                                📎 {{ getFileName(file) }}
-                            </a>
-                            <span class="text-xs text-green-600">✅ Завантажено</span>
-                        </div>
+                            📤 Додати файли портфоліо
+                        </Button>
+                        <p class="text-xs text-gray-400 mt-1">
+                            Максимум 5 файлів, по 10MB кожен. PDF, DOC, DOCX, JPG, PNG, ZIP
+                        </p>
                     </div>
-
-                    <p v-if="form.errors.portfolio" class="text-red-500 text-sm mt-1">
-                        {{ form.errors.portfolio }}
-                    </p>
-                </div>
-
-                <!-- ============================================= -->
-                <!-- ОСТАЛЬНЫЕ ПОЛЯ (БЕЗ ИЗМЕНЕНИЙ) -->
-                <!-- ============================================= -->
-
-                <!-- Bio -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Про себе</label>
-                    <textarea
-                        v-model="form.bio"
-                        rows="4"
-                        placeholder="Розкажіть про себе, ваш досвід та навички..."
-                        class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    ></textarea>
-                </div>
-
-                <!-- Навыки -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Навички</label>
-                    <Input
-                        v-model="form.skills"
-                        placeholder="Наприклад: Photoshop, Figma, HTML, CSS..."
-                    />
-                    <p class="text-xs text-gray-400 mt-1">Перелічіть ваші основні навички через кому</p>
-                </div>
-
-                <!-- Опыт -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Досвід роботи</label>
-                    <textarea
-                        v-model="form.experience"
-                        rows="3"
-                        placeholder="Опишіть ваш досвід, проекти..."
-                        class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    ></textarea>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Компания -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Компанія</label>
-                        <Input v-model="form.company" placeholder="Назва компанії" />
-                    </div>
-
-                    <!-- Телефон -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Телефон</label>
-                        <Input v-model="form.phone" placeholder="+380 99 999 99 99" />
-                    </div>
-                </div>
-
-                <!-- Локация -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Місто</label>
-                    <Input v-model="form.location" placeholder="Київ, Львів, Одеса..." />
-                </div>
+                </Card>
 
                 <!-- Кнопки -->
-                <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-                    <Link :href="route('worker.dashboard')" class="text-sm text-gray-600 hover:text-gray-900">
-                        Скасувати
-                    </Link>
-                    <Button type="submit" :loading="form.processing" variant="primary">
-                        Зберегти
+                <div class="flex gap-3">
+                    <Button type="submit" :loading="saving">
+                        💾 Зберегти зміни
                     </Button>
+                    <Link :href="route('worker.profile.show', user.id)">
+                        <Button variant="secondary" type="button">← Назад до профілю</Button>
+                    </Link>
                 </div>
             </form>
         </div>
@@ -198,145 +232,171 @@
 </template>
 
 <script setup>
-import { useForm, usePage, Link, router } from '@inertiajs/vue3';
+import { ref, computed, onMounted } from 'vue';
+import { router, Link, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import Input from '@/Components/UI/Input.vue';
+import Card from '@/Components/UI/Card.vue';
 import Button from '@/Components/UI/Button.vue';
-import Loader from '@/Components/UI/Loader.vue';
-import { ref } from 'vue';
+
+const props = defineProps({
+    profile: {
+        type: Object,
+        required: true,
+    },
+});
 
 const { auth } = usePage().props;
 const user = auth.user;
 
-const props = defineProps({
-    profile: Object,
+// Состояния
+const saving = ref(false);
+const avatarInput = ref(null);
+const portfolioInput = ref(null);
+const avatarPreview = ref(null);
+const removeAvatarFlag = ref(false);
+
+// Форма
+const form = ref({
+    bio: props.profile.bio || '',
+    skills: props.profile.skills || '',
+    experience: props.profile.experience || '',
+    company: props.profile.company || '',
+    phone: props.profile.phone || '',
+    location: props.profile.location || '',
+    avatar: null,
+    portfolio: [],
+    removed_portfolio: [],
 });
 
-const uploadingAvatar = ref(false);
-
-const form = useForm({
-    bio: props.profile?.bio || '',
-    skills: props.profile?.skills || '',
-    experience: props.profile?.experience || '',
-    company: props.profile?.company || '',
-    phone: props.profile?.phone || '',
-    location: props.profile?.location || '',
-    avatar: null,           // ✅ Файл аватара
-    avatarPreview: null,    // ✅ Превью для отображения
-    portfolio: [],          // ✅ Массив новых файлов портфолио
+// Портфолио с URL
+const portfolioFiles = computed(() => {
+    if (!props.profile.portfolio) return [];
+    if (Array.isArray(props.profile.portfolio)) {
+        return props.profile.portfolio.map((path, index) => ({
+            path: path,
+            url: getFileUrl(path, index),
+            isNew: false,
+        }));
+    }
+    return [];
 });
 
-// =============================================
-// ✅ ЗАГРУЗКА АВАТАРА
-// =============================================
+// Получение URL для файла
+const getFileUrl = (path, index) => {
+    if (!path) return '';
+    if (props.profile.portfolio_urls && props.profile.portfolio_urls[index]) {
+        return props.profile.portfolio_urls[index];
+    }
+    return path;
+};
+
+// Инициалы
+const getInitials = (name) => {
+    if (!name) return '?';
+    return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+};
+
+// Проверка, является ли файл изображением
+const isImage = (file) => {
+    const ext = file.path?.split('.').pop()?.toLowerCase() || '';
+    return ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(ext);
+};
+
+// Обработка ошибки загрузки аватара
+const handleAvatarError = (event) => {
+    event.target.src = '';
+    event.target.onerror = null;
+};
+
+// Загрузка аватара
 const handleAvatarUpload = (event) => {
     const file = event.target.files[0];
-    if (!file) return;
-
-    // Проверка размера (2MB)
-    if (file.size > 2 * 1024 * 1024) {
-        alert('Файл занадто великий. Максимум 2MB.');
-        return;
+    if (file) {
+        form.value.avatar = file;
+        avatarPreview.value = URL.createObjectURL(file);
+        removeAvatarFlag.value = false;
     }
-
-    // Проверка типа
-    if (!file.type.startsWith('image/')) {
-        alert('Будь ласка, оберіть зображення (JPG, PNG, WEBP)');
-        return;
-    }
-
-    form.avatar = file;
-    form.avatarPreview = URL.createObjectURL(file);
-    form.clearErrors('avatar');
 };
 
-// =============================================
-// ✅ ЗАГРУЗКА ПОРТФОЛИО
-// =============================================
+// Удаление аватара
+const removeAvatar = () => {
+    form.value.avatar = null;
+    avatarPreview.value = null;
+    removeAvatarFlag.value = true;
+    if (avatarInput.value) {
+        avatarInput.value.value = '';
+    }
+};
+
+// Загрузка портфолио
 const handlePortfolioUpload = (event) => {
     const files = event.target.files;
-
-    for (let file of files) {
-        // Проверка количества (максимум 5)
-        if (form.portfolio.length >= 5) {
-            alert('Максимум 5 файлів портфоліо');
-            break;
+    if (files.length > 0) {
+        const newFiles = Array.from(files);
+        const totalFiles = portfolioFiles.value.length + newFiles.length;
+        if (totalFiles > 5) {
+            alert('Максимум 5 файлів у портфоліо');
+            return;
         }
-
-        // Проверка размера (10MB)
-        if (file.size > 10 * 1024 * 1024) {
-            alert(`Файл "${file.name}" занадто великий. Максимум 10MB.`);
-            continue;
-        }
-
-        form.portfolio.push(file);
+        form.value.portfolio = [...form.value.portfolio, ...newFiles];
+        // Обновляем список
+        // Это нужно для отображения превью
+        event.target.value = '';
     }
-
-    form.clearErrors('portfolio');
-    // Сбрасываем input, чтобы можно было загрузить те же файлы снова
-    event.target.value = '';
 };
 
-// =============================================
-// ✅ УДАЛЕНИЕ ФАЙЛА ИЗ ПОРТФОЛИО (локально)
-// =============================================
-const removePortfolio = (index) => {
-    form.portfolio.splice(index, 1);
+// Удаление файла из портфолио
+const removePortfolioFile = (index) => {
+    const file = portfolioFiles.value[index];
+    if (file && !file.isNew) {
+        form.value.removed_portfolio.push(file.path);
+    }
+    // Удаляем из формы
+    if (form.value.portfolio.length > 0) {
+        form.value.portfolio.splice(index, 1);
+    }
 };
 
-// =============================================
-// ✅ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-// =============================================
-const formatFileSize = (bytes) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-};
-
-const getFileName = (path) => {
-    return path.split('/').pop();
-};
-
-// =============================================
-// ✅ ОТПРАВКА ФОРМЫ
-// =============================================
+// Отправка формы
 const submit = () => {
-    const formData = new FormData();
+    saving.value = true;
 
-    // Текстовые поля
-    formData.append('bio', form.bio);
-    formData.append('skills', form.skills);
-    formData.append('experience', form.experience);
-    formData.append('company', form.company);
-    formData.append('phone', form.phone);
-    formData.append('location', form.location);
+    const data = new FormData();
+    data.append('bio', form.value.bio || '');
+    data.append('skills', form.value.skills || '');
+    data.append('experience', form.value.experience || '');
+    data.append('company', form.value.company || '');
+    data.append('phone', form.value.phone || '');
+    data.append('location', form.value.location || '');
 
-    // Аватар
-    if (form.avatar) {
-        formData.append('avatar', form.avatar);
+    if (form.value.avatar) {
+        data.append('avatar', form.value.avatar);
     }
 
-    // Портфолио (массив файлов)
-    form.portfolio.forEach(file => {
-        formData.append('portfolio[]', file);
+    if (removeAvatarFlag.value) {
+        data.append('remove_avatar', 'true');
+    }
+
+    // Портфолио
+    if (form.value.portfolio.length > 0) {
+        form.value.portfolio.forEach(file => {
+            data.append('portfolio[]', file);
+        });
+    }
+
+    form.value.removed_portfolio.forEach(path => {
+        data.append('removed_portfolio[]', path);
     });
 
-    // ✅ Важно для PUT запроса с файлами
-    formData.append('_method', 'PUT');
-
-    // Отправляем через Inertia с FormData
-    router.post(route('worker.profile.update'), formData, {
+    router.post(route('worker.profile.update'), data, {
         headers: {
             'Content-Type': 'multipart/form-data',
         },
         onSuccess: () => {
-            // Сбрасываем локальные файлы после успешной отправки
-            form.portfolio = [];
-            form.avatar = null;
-            // Не сбрасываем avatarPreview, потому что он обновится после перезагрузки
-            router.reload();
+            saving.value = false;
         },
         onError: (errors) => {
+            saving.value = false;
             console.error('Ошибки:', errors);
         },
     });

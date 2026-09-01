@@ -34,8 +34,19 @@ class WorkerProfileController extends Controller
             'completed_orders' => $profile->completed_orders ?? 0,
         ];
 
+        // Генерируем URL для файлов
+        $profileData = $profile->toArray();
+        $profileData['avatar_url'] = $profile->avatar ? Storage::disk('s3')->temporaryUrl($profile->avatar, now()->addMinutes(60)) : null;
+
+        // Портфолио
+        $portfolioPaths = $this->decodeJsonField($profile->portfolio);
+        $profileData['portfolio_urls'] = !empty($portfolioPaths) ? array_map(function ($path) {
+            return Storage::disk('s3')->temporaryUrl($path, now()->addMinutes(60));
+        }, $portfolioPaths) : [];
+        $profileData['portfolio'] = $portfolioPaths;
+
         return Inertia::render('Worker/Profile/Show', [
-            'profile' => $profile,
+            'profile' => $profileData,
             'reviews' => $reviews,
             'stats' => $stats,
         ]);
@@ -48,16 +59,24 @@ class WorkerProfileController extends Controller
     {
         $user = auth()->user();
 
-        // Проверяем, что пользователь — воркер
         if (!$user->isWorker()) {
             abort(403, 'Тільки виконавці можуть редагувати профіль');
         }
 
-        // Получаем или создаем профиль
         $profile = $user->workerProfile ?? new WorkerProfile(['user_id' => $user->id]);
 
+        // Генерируем URL для файлов
+        $profileData = $profile->toArray();
+        $profileData['avatar_url'] = $profile->avatar ? Storage::disk('s3')->temporaryUrl($profile->avatar, now()->addMinutes(60)) : null;
+
+        $portfolioPaths = $this->decodeJsonField($profile->portfolio);
+        $profileData['portfolio_urls'] = !empty($portfolioPaths) ? array_map(function ($path) {
+            return Storage::disk('s3')->temporaryUrl($path, now()->addMinutes(60));
+        }, $portfolioPaths) : [];
+        $profileData['portfolio'] = $portfolioPaths;
+
         return Inertia::render('Worker/Profile/Edit', [
-            'profile' => $profile,
+            'profile' => $profileData,
         ]);
     }
 
@@ -82,6 +101,8 @@ class WorkerProfileController extends Controller
             'avatar' => 'nullable|file|max:2048|mimes:jpg,jpeg,png,webp',
             'portfolio.*' => 'nullable|file|max:10240|mimes:pdf,doc,docx,jpg,png,zip',
             'portfolio' => 'nullable|array|max:5',
+            'removed_portfolio' => 'nullable|array',
+            'remove_avatar' => 'nullable|boolean',
         ]);
 
         $profile = $user->workerProfile ?? new WorkerProfile(['user_id' => $user->id]);
@@ -91,37 +112,70 @@ class WorkerProfileController extends Controller
 
         // Загрузка аватара
         if ($request->hasFile('avatar')) {
-            // Удаляем старый аватар из S3
             if ($profile->avatar) {
                 Storage::disk('s3')->delete($profile->avatar);
             }
-
-            // Сохраняем новый аватар
             $path = $request->file('avatar')->store('avatars', 's3');
             $profile->avatar = $path;
         }
 
-        // Загрузка портфолио
-        if ($request->hasFile('portfolio')) {
-            // Удаляем старые файлы портфолио из S3
-            if (!empty($profile->portfolio)) {
-                foreach ($profile->portfolio as $oldFile) {
-                    Storage::disk('s3')->delete($oldFile);
-                }
+        // Удаление аватара
+        if ($request->input('remove_avatar') === 'true' || $request->input('remove_avatar') === '1') {
+            if ($profile->avatar) {
+                Storage::disk('s3')->delete($profile->avatar);
+                $profile->avatar = null;
             }
-
-            // Сохраняем новые файлы
-            $portfolioPaths = [];
-            foreach ($request->file('portfolio') as $file) {
-                $portfolioPaths[] = $file->store('portfolio', 's3');
-            }
-            $profile->portfolio = $portfolioPaths;
         }
+
+        // Портфолио - получаем существующие
+        $existingPortfolio = $this->decodeJsonField($profile->portfolio);
+
+        // Удаляем отмеченные файлы
+        if ($request->has('removed_portfolio')) {
+            $removedFiles = $request->input('removed_portfolio');
+            foreach ($removedFiles as $path) {
+                Storage::disk('s3')->delete($path);
+                $existingPortfolio = array_values(array_diff($existingPortfolio, [$path]));
+            }
+        }
+
+        // Добавляем новые файлы
+        if ($request->hasFile('portfolio')) {
+            foreach ($request->file('portfolio') as $file) {
+                $existingPortfolio[] = $file->store('portfolio', 's3');
+            }
+        }
+
+        $profile->portfolio = !empty($existingPortfolio) ? json_encode($existingPortfolio) : null;
 
         // Сохраняем профиль
         $profile->save();
 
         return redirect()->route('worker.profile.edit')
             ->with('success', 'Профіль успішно оновлено');
+    }
+
+    /**
+     * Вспомогательный метод для декодирования JSON
+     */
+    private function decodeJsonField($value): array
+    {
+        if (empty($value)) {
+            return [];
+        }
+
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            if (is_string($decoded)) {
+                $decoded = json_decode($decoded, true);
+            }
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return [];
     }
 }
