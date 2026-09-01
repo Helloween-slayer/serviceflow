@@ -2,33 +2,31 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Review;
 use App\Models\WorkerProfile;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
 class WorkerProfileController extends Controller
 {
-    /**
-     * Показать профиль воркера (публичный)
-     */
-    public function show($userId)
+    public function show($user)
     {
+        // Если профиля нет, создаем пустую модель (заглушку), чтобы фронтенд не падал
         $profile = WorkerProfile::with(['user'])
-            ->where('user_id', $userId)
-            ->firstOrFail();
+            ->where('user_id', $user)
+            ->first() ?? new WorkerProfile(['user_id' => $user]);
 
-        // Получаем отзывы
         $reviews = Review::with(['client'])
-            ->where('worker_id', $userId)
+            ->where('worker_id', $user)
             ->latest()
             ->limit(10)
             ->get();
 
-        // Статистика
         $stats = [
-            'reviews_count' => Review::where('worker_id', $userId)->count(),
-            'average_rating' => Review::where('worker_id', $userId)->avg('rating') ?? 0,
+            // Считаем общее количество отдельным запросом (не через $reviews->count(), т.к. там limit)
+            'reviews_count' => Review::where('worker_id', $user)->count(),
+            'average_rating' => Review::where('worker_id', $user)->avg('rating') ?? 0,
+            // Если у пустой модели completed_orders = null, отдаем 0
             'completed_orders' => $profile->completed_orders ?? 0,
         ];
 
@@ -39,19 +37,14 @@ class WorkerProfileController extends Controller
         ]);
     }
 
-    /**
-     * Показать форму редактирования профиля (для воркера)
-     */
     public function edit()
     {
         $user = auth()->user();
 
-        // Проверяем, что пользователь — воркер
         if (!$user->isWorker()) {
             abort(403, 'Тільки виконавці можуть редагувати профіль');
         }
 
-        // Получаем или создаем профиль
         $profile = $user->workerProfile ?? new WorkerProfile(['user_id' => $user->id]);
 
         return Inertia::render('Worker/Profile/Edit', [
@@ -59,9 +52,6 @@ class WorkerProfileController extends Controller
         ]);
     }
 
-    /**
-     * Обновить профиль
-     */
     public function update(Request $request)
     {
         $user = auth()->user();

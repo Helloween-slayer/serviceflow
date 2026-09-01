@@ -67,8 +67,6 @@
                     </Link>
                 </Card>
             </div>
-
-            <!-- 👇 ССЫЛКА НА ПРОФИЛЬ - ВЫНЕСЕНА ОТДЕЛЬНО -->
             <div class="mt-6 flex justify-end">
                 <Link
                     :href="route('worker.profile.show', user.id)"

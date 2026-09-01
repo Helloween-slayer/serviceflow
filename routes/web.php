@@ -18,13 +18,19 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+// ========== ПУБЛІЧНИЙ ПРОФІЛЬ ВОРКЕРА (доступен всем) ==========
+// Используем /workers/ (множественное число), чтобы не конфликтовать с группой /worker/
+Route::get('/workers/{user}/profile', [WorkerProfileController::class, 'show'])
+    ->name('worker.profile.show');
+
 // ========== ПУБЛІЧНІ ==========
 Route::get('/', function () {
     return redirect()->route('orders.index');
 });
 
-// ========== ПУБЛІЧНИЙ ПРОФІЛЬ ВОРКЕРА (доступен всем) ==========
-Route::get('/worker/{userId}/profile', [WorkerProfileController::class, 'show'])->name('worker.profile.show');
+// ========== ПУБЛІЧНІ ЗАЯВКИ (ДЛЯ ВСІХ) ==========
+Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 
 // ========== ДАШБОРД ==========
 Route::get('/dashboard', function () {
@@ -43,15 +49,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/telegram/connect', [TelegramController::class, 'connect'])->name('telegram.connect');
     Route::delete('/telegram/disconnect', [TelegramController::class, 'disconnect'])->name('telegram.disconnect');
     Route::patch('/telegram/notifications', [TelegramController::class, 'toggleNotifications'])->name('telegram.notifications');
-    // Route::post('/telegram/webhook', [TelegramController::class, 'webhook'])->name('telegram.webhook');
 
     Route::get('/orders/{order}/messages', [MessageController::class, 'index'])->name('messages.index');
     Route::post('/orders/{order}/messages', [MessageController::class, 'store'])->name('messages.store');
 });
-
-// ========== ПУБЛІЧНІ ЗАЯВКИ (ДЛЯ ВСІХ) ==========
-Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
-Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 
 // ========== КЛІЄНТСЬКІ ЗАЯВКИ ==========
 Route::middleware(['auth', 'role:client'])->prefix('client')->name('client.')->group(function () {
@@ -66,14 +67,12 @@ Route::middleware(['auth', 'role:client'])->prefix('client')->name('client.')->g
     Route::put('/orders/{order}', [OrderController::class, 'update'])->name('orders.update');
     Route::delete('/orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
 
-    // Відгуки
     Route::get('/reviews/create/{order}', [ReviewController::class, 'create'])->name('reviews.create');
     Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
-
     Route::get('/reviews', [ClientReviewController::class, 'index'])->name('reviews.index');
 });
 
-// ========== ВИКОНАВЕЦЬ ==========
+// ========== ВИКОНАВЕЦЬ (ТОЛЬКО ДЛЯ АВТОРИЗОВАННЫХ ВОРКЕРОВ) ==========
 Route::middleware(['auth', 'role:worker'])->prefix('worker')->name('worker.')->group(function () {
     Route::get('/dashboard', function () {
         return Inertia::render('Worker/Dashboard');
@@ -84,6 +83,7 @@ Route::middleware(['auth', 'role:worker'])->prefix('worker')->name('worker.')->g
     Route::put('/orders/{order}/complete', [OrderController::class, 'complete'])->name('orders.complete');
     Route::put('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
 
+    // Редактирование профиля (только для авторизованного воркера)
     Route::get('/profile/edit', [WorkerProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [WorkerProfileController::class, 'update'])->name('profile.update');
 
@@ -115,14 +115,14 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::put('/withdrawals/{withdrawal}', [AdminWithdrawalController::class, 'update'])->name('withdrawals.update');
 });
 
-    // Поповнення балансу
-    Route::middleware(['auth'])->prefix('payment')->name('payment.')->group(function () {
-        Route::post('/deposit', [PaymentController::class, 'deposit'])->name('deposit');
-    });
+// ========== ПЛАТЕЖІ ==========
+Route::middleware(['auth'])->prefix('payment')->name('payment.')->group(function () {
+    Route::post('/deposit', [PaymentController::class, 'deposit'])->name('deposit');
+});
 
-    // Callback від LiqPay (публічний)
-    Route::post('/liqpay/callback', [PaymentController::class, 'callback'])->name('liqpay.callback');
+Route::post('/liqpay/callback', [PaymentController::class, 'callback'])->name('liqpay.callback');
 
+// ========== HEALTH CHECK ==========
 Route::get('/health', function () {
     return response()->json(['status' => 'ok']);
 });

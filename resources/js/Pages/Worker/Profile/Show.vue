@@ -17,19 +17,19 @@
                             <img
                                 v-if="profile.avatar_url"
                                 :src="profile.avatar_url"
-                                :alt="profile.user.name"
+                                :alt="profile.user?.name || 'Користувач'"
                                 class="w-full h-full object-cover"
                                 @error="handleAvatarError"
                             />
                             <div v-else class="w-full h-full flex items-center justify-center text-4xl text-gray-400 bg-gray-50">
-                                {{ getInitials(profile.user.name) }}
+                                {{ getInitials(profile.user?.name || '') }}
                             </div>
                         </div>
                     </div>
 
                     <!-- Информация -->
                     <div class="flex-1">
-                        <h1 class="text-2xl font-bold text-gray-900">{{ profile.user.name }}</h1>
+                        <h1 class="text-2xl font-bold text-gray-900">{{ profile.user?.name || 'Користувач' }}</h1>
                         <div class="flex flex-wrap items-center gap-3 mt-1">
                             <Badge variant="success">✅ Активний</Badge>
                             <span v-if="profile.company" class="text-sm text-gray-600">
@@ -44,12 +44,12 @@
                             <div class="flex items-center gap-1 text-sm">
                                 <span class="text-yellow-500 text-lg">⭐</span>
                                 <span class="font-semibold text-gray-900">{{ averageRating.toFixed(1) }}</span>
-                                <span class="text-gray-400">({{ stats.reviews_count }} відгуків)</span>
+                                <span class="text-gray-400">({{ stats.reviews_count || 0 }} відгуків)</span>
                             </div>
                             <!-- Завершенные заказы -->
                             <div class="flex items-center gap-1 text-sm">
                                 <span class="text-green-500 text-lg">✅</span>
-                                <span class="font-semibold text-gray-900">{{ stats.completed_orders }}</span>
+                                <span class="font-semibold text-gray-900">{{ stats.completed_orders || 0 }}</span>
                                 <span class="text-gray-400">завершених заявок</span>
                             </div>
                         </div>
@@ -118,7 +118,7 @@
                                 <span class="text-gray-400">📧</span>
                                 <div>
                                     <p class="text-sm font-medium text-gray-700">Email</p>
-                                    <p class="text-sm text-gray-600">{{ profile.user.email }}</p>
+                                    <p class="text-sm text-gray-600">{{ profile.user?.email || 'Не вказано' }}</p>
                                 </div>
                             </div>
                             <div v-if="profile.location" class="flex items-start gap-3">
