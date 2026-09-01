@@ -229,7 +229,6 @@ class OrderController extends Controller
      */
     public function show(Order $order)
     {
-        // ✅ ЛОГИРУЕМ ВХОДНЫЕ ДАННЫЕ
         \Log::info('=== ORDER SHOW START ===');
         \Log::info('Order ID from route:', [
             'id' => $order->id,
@@ -241,26 +240,12 @@ class OrderController extends Controller
 
         $orderData = $order->toArray();
 
-        // ✅ ПРИНУДИТЕЛЬНО декодируем JSON
-        $photos = [];
-        if (!empty($order->photos)) {
-            $decoded = json_decode($order->photos, true);
-            // Если после декодирования все еще строка — декодируем еще раз
-            if (is_string($decoded)) {
-                $decoded = json_decode($decoded, true);
-            }
-            $photos = is_array($decoded) ? $decoded : [];
-        }
+        // ✅ Декодируем photos
+        $photos = $this->decodeJsonField($order->photos);
+        $files = $this->decodeJsonField($order->files);
 
-        $files = [];
-        if (!empty($order->files)) {
-            $decoded = json_decode($order->files, true);
-            if (is_string($decoded)) {
-                $decoded = json_decode($decoded, true);
-            }
-            $files = is_array($decoded) ? $decoded : [];
-        }
-
+        $orderData['photos'] = $photos;
+        $orderData['files'] = $files;
         $orderData['photos_urls'] = !empty($photos) ? array_map(function ($path) {
             return Storage::disk('s3')->url($path);
         }, $photos) : [];
@@ -294,11 +279,14 @@ class OrderController extends Controller
             return redirect()->route('client.orders.index')->with('error', 'Можна редагувати тільки нові заявки');
         }
 
-        $orderData = $order->load('tags')->toArray();
+        $order->load('tags');
 
-        $photos = !empty($order->photos) ? json_decode($order->photos, true) : [];
-        $files = !empty($order->files) ? json_decode($order->files, true) : [];
+        $orderData = $order->toArray();
+        $photos = $this->decodeJsonField($order->photos);
+        $files = $this->decodeJsonField($order->files);
 
+        $orderData['photos'] = $photos;
+        $orderData['files'] = $files;
         $orderData['photos_urls'] = !empty($photos) ? array_map(function ($path) {
             return Storage::disk('s3')->url($path);
         }, $photos) : [];
@@ -320,32 +308,34 @@ class OrderController extends Controller
     {
         $data = $request->validated();
 
-        // ОБНОВЛЯЕМ ФОТО (добавляем новые к существующим)
-        $existingPhotos = $order->photos ?? [];
+        // ✅ Получаем существующие фото (всегда в виде массива)
+        $existingPhotos = $this->decodeJsonField($order->photos);
+
         if ($request->hasFile('photos')) {
             foreach ($request->file('photos') as $photo) {
                 $existingPhotos[] = $photo->store('orders/photos', 's3');
             }
         }
-        $data['photos'] = $existingPhotos;
+        $data['photos'] = !empty($existingPhotos) ? json_encode($existingPhotos) : null;
 
-        // ОБНОВЛЯЕМ ФАЙЛЫ (добавляем новые к существующим)
-        $existingFiles = $order->files ?? [];
+        // ✅ Получаем существующие файлы (всегда в виде массива)
+        $existingFiles = $this->decodeJsonField($order->files);
+
         if ($request->hasFile('files')) {
             foreach ($request->file('files') as $file) {
                 $existingFiles[] = $file->store('orders/files', 's3');
             }
         }
-        $data['files'] = $existingFiles;
 
-        // Удаляем файлы, которые отмечены для удаления
+        // ✅ Удаляем файлы, которые отмечены для удаления
         if ($request->has('removed_files')) {
             $removedFiles = $request->input('removed_files');
             foreach ($removedFiles as $path) {
                 Storage::disk('s3')->delete($path);
-                $data['files'] = array_values(array_diff($data['files'], [$path]));
+                $existingFiles = array_values(array_diff($existingFiles, [$path]));
             }
         }
+        $data['files'] = !empty($existingFiles) ? json_encode($existingFiles) : null;
 
         \Log::info('Order updated with files:', [
             'order_id' => $order->id,
@@ -372,16 +362,18 @@ class OrderController extends Controller
         }
 
         try {
-            // Удаляем все фото из S3
-            if (!empty($order->photos)) {
-                foreach ($order->photos as $photo) {
+            // ✅ Удаляем все фото из S3
+            $photos = $this->decodeJsonField($order->photos);
+            if (!empty($photos)) {
+                foreach ($photos as $photo) {
                     Storage::disk('s3')->delete($photo);
                 }
             }
 
-            // Удаляем все файлы из S3
-            if (!empty($order->files)) {
-                foreach ($order->files as $file) {
+            // ✅ Удаляем все файлы из S3
+            $files = $this->decodeJsonField($order->files);
+            if (!empty($files)) {
+                foreach ($files as $file) {
                     Storage::disk('s3')->delete($file);
                 }
             }
@@ -395,5 +387,35 @@ class OrderController extends Controller
                 'error' => 'Не вдалося видалити заявку. Спробуйте пізніше.'
             ]);
         }
+    }
+
+    /**
+     * ✅ Вспомогательный метод для декодирования JSON полей
+     * Всегда возвращает массив
+     */
+    private function decodeJsonField($value): array
+    {
+        if (empty($value)) {
+            return [];
+        }
+
+        // Если уже массив
+        if (is_array($value)) {
+            return $value;
+        }
+
+        // Если строка - пробуем декодировать
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+
+            // Если после декодирования все еще строка - декодируем еще раз
+            if (is_string($decoded)) {
+                $decoded = json_decode($decoded, true);
+            }
+
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return [];
     }
 }

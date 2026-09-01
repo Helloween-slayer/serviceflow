@@ -62,11 +62,11 @@
             <!-- ============================================= -->
             <!-- ✅ ФОТО ЗАЯВКИ -->
             <!-- ============================================= -->
-            <div v-if="order.photos && order.photos.length > 0" class="mb-6">
+            <div v-if="safePhotos.length > 0" class="mb-6">
                 <h3 class="font-semibold text-gray-700 mb-3">📸 Фото заявки:</h3>
                 <div class="flex flex-wrap gap-3">
                     <div
-                        v-for="(photo, index) in order.photos"
+                        v-for="(photo, index) in safePhotos"
                         :key="'photo-' + index"
                         class="relative w-32 h-32 rounded-lg overflow-hidden border border-gray-200 hover:shadow-md transition cursor-pointer"
                         @click="openPhotoModal(index)"
@@ -90,11 +90,11 @@
             <!-- ============================================= -->
             <!-- ✅ ФАЙЛЫ ЗАЯВКИ -->
             <!-- ============================================= -->
-            <div v-if="order.files && order.files.length > 0" class="mb-6">
+            <div v-if="safeFiles.length > 0" class="mb-6">
                 <h3 class="font-semibold text-gray-700 mb-3">📎 Додаткові файли:</h3>
                 <div class="flex flex-wrap gap-2">
                     <div
-                        v-for="(file, index) in order.files"
+                        v-for="(file, index) in safeFiles"
                         :key="'file-' + index"
                         class="flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-200 transition"
                     >
@@ -201,7 +201,7 @@
         <div class="p-4">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold text-gray-900">
-                    Фото {{ photoModal.index + 1 }} з {{ order.photos?.length || 0 }}
+                    Фото {{ photoModal.index + 1 }} з {{ safePhotos.length }}
                 </h3>
                 <button
                     @click="closePhotoModal"
@@ -228,7 +228,7 @@
                 </button>
                 <button
                     @click="nextPhoto"
-                    :disabled="photoModal.index >= (order.photos?.length || 0) - 1"
+                    :disabled="photoModal.index >= safePhotos.length - 1"
                     class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
                 >
                     Наступне →
@@ -301,6 +301,38 @@ const photoModal = ref({
 });
 
 // ==============================================
+// 👇 БЕЗОПАСНЫЕ ВЫЧИСЛЯЕМЫЕ СВОЙСТВА ДЛЯ ФАЙЛОВ
+// ==============================================
+
+const safePhotos = computed(() => {
+    if (!props.order.photos) return [];
+    if (Array.isArray(props.order.photos)) return props.order.photos;
+    if (typeof props.order.photos === 'string') {
+        try {
+            const parsed = JSON.parse(props.order.photos);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+    return [];
+});
+
+const safeFiles = computed(() => {
+    if (!props.order.files) return [];
+    if (Array.isArray(props.order.files)) return props.order.files;
+    if (typeof props.order.files === 'string') {
+        try {
+            const parsed = JSON.parse(props.order.files);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+    return [];
+});
+
+// ==============================================
 // 👇 ПРОВЕРКА ПРАВ
 // ==============================================
 
@@ -369,7 +401,6 @@ const getFileName = (path) => {
 
 const getPhotoUrl = (path, index) => {
     if (!path) return '';
-    // Если есть photos_urls — используем их
     if (props.order.photos_urls && props.order.photos_urls[index]) {
         return props.order.photos_urls[index];
     }
@@ -394,7 +425,7 @@ const handleImageError = (event) => {
 // ==============================================
 
 const openPhotoModal = (index) => {
-    const photos = props.order.photos || [];
+    const photos = safePhotos.value;
     const urls = props.order.photos_urls || [];
 
     if (index >= 0 && index < photos.length) {
@@ -411,7 +442,7 @@ const closePhotoModal = () => {
 };
 
 const nextPhoto = () => {
-    const photos = props.order.photos || [];
+    const photos = safePhotos.value;
     if (photoModal.value.index < photos.length - 1) {
         openPhotoModal(photoModal.value.index + 1);
     }
