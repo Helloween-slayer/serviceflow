@@ -247,11 +247,21 @@ class OrderController extends Controller
         $orderData['photos'] = $photos;
         $orderData['files'] = $files;
         $orderData['photos_urls'] = !empty($photos) ? array_map(function ($path) {
-            return Storage::disk('s3')->url($path);
+            try {
+                return Storage::disk('s3')->temporaryUrl($path, now()->addMinutes(60));
+            } catch (\Exception $e) {
+                \Log::error('Error generating temporary URL: ' . $e->getMessage());
+                return null;
+            }
         }, $photos) : [];
 
         $orderData['files_urls'] = !empty($files) ? array_map(function ($path) {
-            return Storage::disk('s3')->url($path);
+            try {
+                return Storage::disk('s3')->temporaryUrl($path, now()->addMinutes(60));
+            } catch (\Exception $e) {
+                \Log::error('Error generating temporary URL: ' . $e->getMessage());
+                return null;
+            }
         }, $files) : [];
 
         \Log::info('Order Show Data:', [
