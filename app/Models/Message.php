@@ -10,6 +10,13 @@ class Message extends Model
         'order_id',
         'user_id',
         'message',
+        'files',
+        'file_names',
+    ];
+
+    protected $casts = [
+        'files' => 'array',
+        'file_names' => 'array',
     ];
 
     public function user()

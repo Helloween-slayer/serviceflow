@@ -13,19 +13,20 @@ class NewMessageEvent implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public Message $message;
+    public Message $message; //  Передаем сообщение
 
     public function __construct(Message $message)
     {
         $this->message = $message;
     }
 
+    // Канал, куда отправляем событие (для конкретной заявки)
     public function broadcastOn(): Channel
     {
-        // Канал для конкретного чата
         return new Channel('order.' . $this->message->order_id);
     }
 
+    // Данные, которые отправляются в вебсокет
     public function broadcastWith(): array
     {
         return [

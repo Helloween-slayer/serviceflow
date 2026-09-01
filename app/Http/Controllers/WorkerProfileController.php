@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Review;
 use App\Models\WorkerProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class WorkerProfileController extends Controller
@@ -79,46 +77,10 @@ class WorkerProfileController extends Controller
             'company' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
             'location' => 'nullable|string|max:255',
-            'avatar' => 'nullable|file|max:2048|mimes:jpg,jpeg,png,webp',
-            'portfolio.*' => 'nullable|file|max:10240|mimes:pdf,doc,docx,jpg,png,zip',
-            'portfolio' => 'nullable|array|max:5',
         ]);
 
         $profile = $user->workerProfile ?? new WorkerProfile(['user_id' => $user->id]);
-
-        // Заполняем текстовые поля
         $profile->fill($validated);
-
-        // Загрузка аватара
-        if ($request->hasFile('avatar')) {
-            // Удаляем старый аватар из S3
-            if ($profile->avatar) {
-                Storage::disk('s3')->delete($profile->avatar);
-            }
-
-            // Сохраняем новый аватар
-            $path = $request->file('avatar')->store('avatars', 's3');
-            $profile->avatar = $path;
-        }
-
-        // Загрузка портфолио
-        if ($request->hasFile('portfolio')) {
-            // Удаляем старые файлы портфолио из S3
-            if (!empty($profile->portfolio)) {
-                foreach ($profile->portfolio as $oldFile) {
-                    Storage::disk('s3')->delete($oldFile);
-                }
-            }
-
-            // Сохраняем новые файлы
-            $portfolioPaths = [];
-            foreach ($request->file('portfolio') as $file) {
-                $portfolioPaths[] = $file->store('portfolio', 's3');
-            }
-            $profile->portfolio = $portfolioPaths;
-        }
-
-        // Сохраняем профиль
         $profile->save();
 
         return redirect()->route('worker.profile.edit')

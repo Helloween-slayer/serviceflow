@@ -25,3 +25,5 @@ createInertiaApp({
         color: '#4B5563',
     },
 });
+
+console.log('Version: 1.0.1');

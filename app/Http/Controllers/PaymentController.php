@@ -41,6 +41,7 @@ class PaymentController extends Controller
                 'amount' => $amount,
                 'balance_after' => $user->balance ?? 0,
                 'status' => 'pending',
+                'payment_id' => $orderId,
                 'description' => 'Поповнення балансу через LiqPay',
             ]);
 
@@ -68,56 +69,68 @@ class PaymentController extends Controller
      */
     public function callback(Request $request)
     {
-        try {
-            $data = $request->all();
+        // ДОБАВЛЕНО: логируем входящий запрос
+        \Log::info('=== LIQPAY CALLBACK HIT ===', [
+            'method' => $request->method(),
+            'ip' => $request->ip(),
+            'all' => $request->all()
+        ]);
 
-            // Проверяем подпись
-            if (!$this->liqpayService->verifySignature($data)) {
-                Log::warning('LiqPay: неверная подпись');
-                return response()->json(['error' => 'Invalid signature'], 403);
-            }
+        $data = $request->all();
 
-            // Проверяем статус платежа
-            if ($data['status'] !== 'success') {
-                Log::warning('LiqPay: статус платежа не success', ['status' => $data['status']]);
-                return response()->json(['status' => 'ok']);
-            }
+        \Log::info('LiqPay callback received', ['data' => $data]);
 
-            // Находим транзакцию по payment_id
-            $transaction = Transaction::where('payment_id', $data['order_id'])->first();
-
-            if (!$transaction) {
-                Log::warning('LiqPay: транзакция не найдена', ['order_id' => $data['order_id']]);
-                return response()->json(['status' => 'ok']);
-            }
-
-            // Если транзакция уже завершена — ничего не делаем
-            if ($transaction->status === 'completed') {
-                return response()->json(['status' => 'ok']);
-            }
-
-            // Обновляем транзакцию и пополняем баланс
-            $user = User::find($transaction->user_id);
-
-            if ($user) {
-                $user->deposit($transaction->amount, $data['order_id'], 'Поповнення через LiqPay');
-                $transaction->update(['status' => 'completed']);
-            }
-
-            Log::info('LiqPay: callback обработан', [
-                'order_id' => $data['order_id'],
-                'amount' => $transaction->amount,
-            ]);
-
-            return response()->json(['status' => 'ok']);
-
-        } catch (\Exception $e) {
-            Log::error('LiqPay: ошибка callback', [
-                'error' => $e->getMessage(),
-                'data' => $request->all(),
-            ]);
-
-            return response()->json(['error' => 'Internal server error'], 500);
+        // 1. Проверяем подпись
+        if (!$this->liqpayService->verifySignature($data)) {
+            \Log::error('LiqPay callback: Invalid signature');
+            return response()->json(['status' => 'error'], 400);
         }
+
+        // 2. Извлекаем data из callback
+        if (!isset($data['data'])) {
+            \Log::error('LiqPay callback: Missing data field');
+            return response()->json(['status' => 'error'], 400);
+        }
+
+        $decodedData = json_decode(base64_decode($data['data']), true);
+
+        if (!$decodedData || !isset($decodedData['order_id'])) {
+            \Log::error('LiqPay callback: Invalid data format');
+            return response()->json(['status' => 'error'], 400);
+        }
+
+        // 3. Проверяем статус
+        if (!in_array($decodedData['status'], ['success', 'sandbox'])) {
+            \Log::warning('LiqPay callback: Invalid status', ['status' => $decodedData['status']]);
+            return response()->json(['status' => 'ok']);
+        }
+
+        // 4. Обновляем транзакцию
+        $transaction = Transaction::where('payment_id', $decodedData['order_id'])->first();
+
+        if (!$transaction) {
+            \Log::warning('Transaction not found', ['order_id' => $decodedData['order_id']]);
+            return response()->json(['status' => 'ok']);
+        }
+
+        if ($transaction->status === 'completed') {
+            return response()->json(['status' => 'ok']);
+        }
+
+        \Log::info('=== DEPOSIT COMPLETED ===', [
+            'transaction_id' => $transaction->id,
+            'user_id' => $transaction->user_id,
+            'amount' => $transaction->amount,
+            'status' => $decodedData['status']
+        ]);
+
+        $transaction->update(['status' => 'completed']);
+
+        $user = User::find($transaction->user_id);
+        if ($user) {
+            $user->deposit($transaction->amount, $decodedData['order_id'], 'Поповнення через LiqPay');
+        }
+
+        return response()->json(['status' => 'ok']);
     }
 }

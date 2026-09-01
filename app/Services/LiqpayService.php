@@ -38,10 +38,9 @@ class LiqpayService
             'description' => $description,
             'order_id' => $orderId,
             'server_url' => config('services.liqpay.server_url'),
-            'result_url' => route('client.dashboard'),
+            'result_url' => config('services.liqpay.result_url'),
             'sandbox' => 1,
         ];
-
         $encodedData = base64_encode(json_encode($data));
         $signature = base64_encode(sha1($privateKey . $encodedData . $privateKey, 1));
 
@@ -57,6 +56,31 @@ class LiqpayService
      */
     public function verifySignature(array $data): bool
     {
-        return $this->liqpay->verifySignature($data);
+        try {
+            $privateKey = config('services.liqpay.private_key');
+
+            if (!isset($data['data']) || !isset($data['signature'])) {
+                \Log::error('Missing signature data');
+                return false;
+            }
+
+            $expectedSignature = base64_encode(
+                sha1($privateKey . $data['data'] . $privateKey, true)
+            );
+
+            $isValid = $data['signature'] === $expectedSignature;
+
+            if (!$isValid) {
+                \Log::error('Signature mismatch', [
+                    'received' => $data['signature'],
+                    'expected' => $expectedSignature
+                ]);
+            }
+
+            return $isValid;
+        } catch (\Exception $e) {
+            \Log::error('Signature verification error: ' . $e->getMessage());
+            return false;
+        }
     }
 }

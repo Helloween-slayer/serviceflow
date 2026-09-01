@@ -11,6 +11,7 @@ const form = useForm({
     email: '',
     password: '',
     password_confirmation: '',
+    role_id: 3, // По умолчанию Клиент
 });
 
 const submit = () => {
@@ -54,6 +55,22 @@ const submit = () => {
                 />
 
                 <InputError class="mt-2" :message="form.errors.email" />
+            </div>
+
+            <!-- ВЫБОР РОЛИ -->
+            <div class="mt-4">
+                <InputLabel for="role_id" value="Я реєструюся як:" />
+
+                <select
+                    id="role_id"
+                    v-model="form.role_id"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                >
+                    <option value="3">Клієнт</option>
+                    <option value="2">Воркер</option>
+                </select>
+
+                <InputError class="mt-2" :message="form.errors.role_id" />
             </div>
 
             <div class="mt-4">

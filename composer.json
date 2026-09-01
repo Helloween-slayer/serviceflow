@@ -6,13 +6,14 @@
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
-        "php": "^8.3",
+        "php": "^8.4",
+        "aws/aws-sdk-php": "^3.394",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/framework": "^13.8",
-        "laravel/horizon": "^5.48",
         "laravel/reverb": "^1.11",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
+        "league/flysystem-aws-s3-v3": "3.0",
         "liqpay/liqpay": "^1.4",
         "predis/predis": "^3.5",
         "tightenco/ziggy": "^2.0"
