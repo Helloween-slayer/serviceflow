@@ -5,9 +5,11 @@ namespace App\Providers;
 use App\Models\Order;
 use App\Models\Tag;
 use App\Models\User;
+use App\Models\WorkerProfile;
 use App\Policies\OrderPolicy;
 use App\Policies\TagPolicy;
 use App\Policies\UserPolicy;
+use App\Policies\WorkerProfilePolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -21,6 +23,7 @@ class AuthServiceProvider extends ServiceProvider
         Order::class => OrderPolicy::class,
         User::class => UserPolicy::class,
         Tag::class => TagPolicy::class,
+        WorkerProfile::class => WorkerProfilePolicy::class,
     ];
 
     /**

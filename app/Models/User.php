@@ -21,6 +21,8 @@ class User extends Authenticatable
         'balance',
     ];
 
+    protected $with = ['role'];
+
     public function deposit(float $amount, ?string $paymentId = null, ?string $description = null): self
     {
         // 1. Увеличиваем баланс

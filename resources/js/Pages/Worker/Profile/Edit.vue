@@ -7,15 +7,65 @@
             </div>
 
             <form @submit.prevent="submit" class="space-y-6">
-                <!-- Аватар (заглушка) -->
-                <div class="flex items-center gap-4">
-                    <div class="w-20 h-20 rounded-full bg-blue-500 flex items-center justify-center text-white text-3xl font-bold">
-                        {{ user.name.charAt(0).toUpperCase() }}
+                <!-- Аватар -->
+                <div class="flex items-center gap-6">
+                    <div class="relative">
+                        <div
+                            class="w-24 h-24 rounded-full overflow-hidden bg-gray-100 border-4 border-gray-200 flex items-center justify-center"
+                            :class="{ 'opacity-50': uploadingAvatar }"
+                        >
+                            <img
+                                v-if="avatarPreview"
+                                :src="avatarPreview"
+                                alt="Аватар"
+                                class="w-full h-full object-cover"
+                            />
+                            <div v-else-if="profile.avatar_url" class="w-full h-full">
+                                <img
+                                    :src="profile.avatar_url"
+                                    alt="Аватар"
+                                    class="w-full h-full object-cover"
+                                    @error="handleAvatarError"
+                                />
+                            </div>
+                            <div v-else class="text-4xl text-gray-300">
+                                {{ getUserInitials() }}
+                            </div>
+                        </div>
+
+                        <div
+                            class="absolute inset-0 rounded-full bg-black/40 opacity-0 hover:opacity-100 transition flex items-center justify-center cursor-pointer"
+                            @click="triggerFileInput"
+                        >
+                            <div class="text-white text-center">
+                                <div class="text-2xl">📷</div>
+                                <div class="text-xs font-medium">Змінити</div>
+                            </div>
+                        </div>
+
+                        <input
+                            ref="fileInput"
+                            type="file"
+                            accept="image/*"
+                            class="hidden"
+                            @change="handleFileSelect"
+                        />
                     </div>
+
                     <div>
-                        <p class="font-medium">{{ user.name }}</p>
-                        <p class="text-sm text-gray-500">{{ user.email }}</p>
+                        <p class="font-medium">{{ auth.user?.name || 'Користувач' }}</p>
+                        <p class="text-sm text-gray-500">{{ auth.user?.email || '' }}</p>
+                        <p class="text-xs text-gray-400 mt-1">Натисніть на аватар для завантаження</p>
                     </div>
+                </div>
+
+                <!-- Прогрес завантаження -->
+                <div v-if="uploadingAvatar" class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div
+                        class="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                        :style="{ width: uploadProgress + '%' }"
+                    ></div>
+                    <p class="text-xs text-gray-500 mt-1">Завантаження... {{ uploadProgress }}%</p>
                 </div>
 
                 <!-- Bio -->
@@ -75,7 +125,7 @@
                     <Link :href="route('worker.dashboard')" class="text-sm text-gray-600 hover:text-gray-900">
                         Скасувати
                     </Link>
-                    <Button type="submit" :loading="form.processing" variant="primary">
+                    <Button type="submit" :loading="form.processing || uploadingAvatar" variant="primary">
                         Зберегти
                     </Button>
                 </div>
@@ -85,6 +135,7 @@
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { useForm, usePage, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Input from '@/Components/UI/Input.vue';
@@ -93,9 +144,13 @@ import Button from '@/Components/UI/Button.vue';
 const { auth } = usePage().props;
 
 const props = defineProps({
-    profile: Object,
+    profile: {
+        type: Object,
+        default: () => ({}),
+    },
 });
 
+// Форма
 const form = useForm({
     bio: props.profile?.bio || '',
     skills: props.profile?.skills || '',
@@ -103,13 +158,119 @@ const form = useForm({
     company: props.profile?.company || '',
     phone: props.profile?.phone || '',
     location: props.profile?.location || '',
+    avatar: null,
 });
 
+// Стани для аватара
+const fileInput = ref(null);
+const avatarPreview = ref(null);
+const uploadingAvatar = ref(false);
+const uploadProgress = ref(0);
+
+// Метод для отримання ініціалів
+const getUserInitials = () => {
+    const name = auth.user?.name || '';
+    if (!name) return '?';
+    return name
+        .split(' ')
+        .map(word => word[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+};
+
+// Тригер для вибору файлу
+const triggerFileInput = () => {
+    fileInput.value?.click();
+};
+
+// Обробка вибору файлу
+const handleFileSelect = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Валідація
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+        alert('Будь ласка, оберіть файл зображення (JPEG, PNG, GIF, WEBP)');
+        return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+        alert('Файл занадто великий. Максимальний розмір - 2MB');
+        return;
+    }
+
+    // Створюємо прев'ю
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        avatarPreview.value = e.target.result;
+    };
+    reader.readAsDataURL(file);
+
+    // Зберігаємо файл у формі
+    form.avatar = file;
+
+    // Очищаємо input для можливості повторного вибору того ж файлу
+    event.target.value = '';
+};
+
+// Обробка помилки завантаження аватара
+const handleAvatarError = (event) => {
+    event.target.style.display = 'none';
+};
+
+// Submit форми
 const submit = () => {
-    form.put(route('worker.profile.update'), {
+    const options = {
         onSuccess: () => {
-            router.reload();
+            if (uploadingAvatar.value) {
+                uploadProgress.value = 100;
+                setTimeout(() => {
+                    uploadingAvatar.value = false;
+                    router.visit(route('worker.profile.show', auth.user.id));
+                }, 500);
+            } else {
+                router.visit(route('worker.profile.show', auth.user.id));
+            }
         },
-    });
+        onError: (errors) => {
+            uploadingAvatar.value = false;
+            uploadProgress.value = 0;
+            console.error('Помилка збереження:', errors);
+            alert('Помилка при збереженні. Спробуйте ще раз.');
+        },
+    };
+
+    if (form.avatar) {
+        uploadingAvatar.value = true;
+        uploadProgress.value = 0;
+
+        const interval = setInterval(() => {
+            if (uploadProgress.value < 90) {
+                uploadProgress.value += 10;
+            }
+        }, 200);
+
+        form.put(route('worker.profile.update'), {
+            ...options,
+            forceFormData: true,
+            onProgress: (progress) => {
+                if (progress.percentage) {
+                    uploadProgress.value = Math.round(progress.percentage);
+                }
+            },
+            onSuccess: () => {
+                clearInterval(interval);
+                options.onSuccess();
+            },
+            onError: (errors) => {
+                clearInterval(interval);
+                options.onError(errors);
+            },
+        });
+    } else {
+        form.put(route('worker.profile.update'), options);
+    }
 };
 </script>
