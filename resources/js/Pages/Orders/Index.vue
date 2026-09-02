@@ -7,6 +7,55 @@
                 <p class="text-gray-600 mt-1">Заявки, які чекають на виконавця</p>
             </div>
 
+            <!-- ============================================= -->
+            <!-- ✅ ФИЛЬТРЫ -->
+            <!-- ============================================= -->
+            <div class="mb-6 flex flex-col md:flex-row gap-3">
+                <!-- Поиск -->
+                <div class="flex-1">
+                    <Input
+                        v-model="filters.search"
+                        placeholder="Пошук за назвою або описом..."
+                        @input="applyFilters"
+                    />
+                </div>
+
+                <!-- Фильтр по тегам -->
+                <div class="w-full md:w-48">
+                    <select
+                        v-model="filters.tag"
+                        class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        @change="applyFilters"
+                    >
+                        <option value="">Всі теги</option>
+                        <option
+                            v-for="tag in tags"
+                            :key="tag.id"
+                            :value="tag.id"
+                        >
+                            {{ tag.name }}
+                        </option>
+                    </select>
+                </div>
+
+                <!-- Сортировка -->
+                <div class="w-full md:w-48">
+                    <select
+                        v-model="filters.sort"
+                        class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        @change="applyFilters"
+                    >
+                        <option value="newest">Спочатку нові</option>
+                        <option value="price_asc">Ціна: від низької</option>
+                        <option value="price_desc">Ціна: від високої</option>
+                    </select>
+                </div>
+
+                <Button variant="secondary" @click="resetFilters">
+                    Скинути
+                </Button>
+            </div>
+
             <!-- Счетчик -->
             <div class="flex items-center gap-2 mb-4 text-sm text-gray-500">
                 <span>Всього:</span>
@@ -76,9 +125,11 @@
 
             <!-- Пустое состояние -->
             <EmptyState v-else>
-                <template #title>Заявок поки немає</template>
+                <template #title>
+                    {{ filters.search || filters.tag ? 'Заявок не знайдено' : 'Заявок поки немає' }}
+                </template>
                 <template #description>
-                    Наразі немає доступних заявок. Загляніть пізніше!
+                    {{ filters.search || filters.tag ? 'Спробуйте змінити параметри пошуку' : 'Загляніть пізніше!' }}
                 </template>
             </EmptyState>
 
@@ -91,16 +142,48 @@
 </template>
 
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import { router, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Badge from '@/Components/UI/Badge.vue';
+import Button from '@/Components/UI/Button.vue';
+import Input from '@/Components/UI/Input.vue';
 import EmptyState from '@/Components/UI/EmptyState.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 
 const props = defineProps({
     orders: Object,
+    tags: Array,
+    filters: Object,
 });
 
+// =============================================
+// ✅ СОСТОЯНИЕ ФИЛЬТРОВ
+// =============================================
+const filters = ref({
+    search: props.filters?.search || '',
+    tag: props.filters?.tag || '',
+    sort: props.filters?.sort || 'newest',
+});
+
+// =============================================
+// ✅ ПРИМЕНЕНИЕ ФИЛЬТРОВ
+// =============================================
+const applyFilters = () => {
+    router.get(route('orders.index'), filters.value, { preserveState: true });
+};
+
+// =============================================
+// ✅ СБРОС ФИЛЬТРОВ
+// =============================================
+const resetFilters = () => {
+    filters.value = { search: '', tag: '', sort: 'newest' };
+    applyFilters();
+};
+
+// =============================================
+// ✅ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// =============================================
 const formatDate = (date) => {
     return new Date(date).toLocaleDateString('uk-UA');
 };

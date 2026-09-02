@@ -7,50 +7,50 @@ import NavLink from '@/Components/NavLink.vue';
 const { auth } = usePage().props;
 const showDropdown = ref(false);
 
-// Получаем пользователя (может быть null)
 const user = computed(() => auth.user);
 
 const menuItems = computed(() => {
     if (!user.value) {
         return [
-            { label: 'Головна', href: route('dashboard'), active: 'dashboard', icon: '🏠' }
+            { label: '🏠 Головна', href: route('dashboard'), active: 'dashboard' }
         ];
     }
 
     const role = user.value.role_id;
     const items = [];
 
-    // 👇 БЕЗ ИКОНКИ В LABEL
-    items.push({
-        label: 'Головна',
-        href: route('dashboard'),
-        active: 'dashboard',
-        icon: '🏠'
-    });
+    // =============================================
+    // 👇 ГЛАВНЫЕ ВКЛАДКИ ДЛЯ ВСЕХ (ЗАЯВКИ + ВИКОНАВЦІ)
+    // =============================================
+    items.push(
+        { label: '📋 Заявки', href: route('orders.index'), active: 'orders.index' },
+        { label: '👥 Виконавці', href: route('workers.index'), active: 'workers.index' }
+    );
 
+    // =============================================
+    // 👇 ДАЛЕЕ ИДУТ ЛИЧНЫЕ КАБИНЕТЫ ПО РОЛЯМ
+    // =============================================
     if (role === 1) { // Админ
         items.push(
-            { label: 'Мій дашборд', href: route('admin.dashboard'), active: 'admin.dashboard', icon: '📊' },
-            { label: 'Всі заявки', href: route('admin.orders.index'), active: 'admin.orders.index', icon: '📋' },
-            { label: 'Користувачі', href: route('admin.users.index'), active: 'admin.users.index', icon: '👥' },
-            { label: 'Теги', href: route('admin.tags.index'), active: 'admin.tags.index', icon: '🏷️' },
-            { label: 'Відгуки', href: route('admin.reviews.index'), active: 'admin.reviews.index', icon: '⭐' },
-            { label: 'Виведення', href: route('admin.withdrawals.index'), active: 'admin.withdrawals.index', icon: '📤' }
+            { label: '📊 Адмін-панель', href: route('admin.dashboard'), active: 'admin.dashboard' },
+            { label: '👥 Користувачі', href: route('admin.users.index'), active: 'admin.users.index' },
+            { label: '🏷️ Теги', href: route('admin.tags.index'), active: 'admin.tags.index' },
+            { label: '⭐ Відгуки', href: route('admin.reviews.index'), active: 'admin.reviews.index' },
+            { label: '📤 Виведення', href: route('admin.withdrawals.index'), active: 'admin.withdrawals.index' }
         );
     } else if (role === 2) { // Воркер
         items.push(
-            { label: 'Мій дашборд', href: route('worker.dashboard'), active: 'worker.dashboard', icon: '📊' },
-            { label: 'Мої заявки', href: route('worker.orders.index'), active: 'worker.orders.index', icon: '📋' },
-            { label: 'Мої відгуки', href: route('worker.reviews.index'), active: 'worker.reviews.index', icon: '⭐' },
-            { label: 'Баланс', href: route('worker.balance.index'), active: 'worker.balance.index', icon: '💰' }
+            { label: '📊 Мій дашборд', href: route('worker.dashboard'), active: 'worker.dashboard' },
+            { label: '📋 Мої заявки', href: route('worker.orders.index'), active: 'worker.orders.index' },
+            { label: '⭐ Мої відгуки', href: route('worker.reviews.index'), active: 'worker.reviews.index' },
+            { label: '💰 Баланс', href: route('worker.balance.index'), active: 'worker.balance.index' }
         );
     } else if (role === 3) { // Клиент
         items.push(
-            { label: 'Мій дашборд', href: route('client.dashboard'), active: 'client.dashboard', icon: '📊' },
-            { label: 'Мої заявки', href: route('client.orders.index'), active: 'client.orders.index', icon: '📋' },
-            { label: 'Створити заявку', href: route('client.orders.create'), active: 'client.orders.create', icon: '➕' },
-            { label: 'Мої відгуки', href: route('client.reviews.index'), active: 'client.reviews.index', icon: '⭐' },
-            { label: 'Баланс', href: route('client.dashboard'), active: 'client.dashboard', icon: '💰' }
+            { label: '📊 Мій дашборд', href: route('client.dashboard'), active: 'client.dashboard' },
+            { label: '➕ Створити заявку', href: route('client.orders.create'), active: 'client.orders.create' },
+            { label: '📋 Мої заявки', href: route('client.orders.index'), active: 'client.orders.index' },
+            { label: '⭐ Мої відгуки', href: route('client.reviews.index'), active: 'client.reviews.index' }
         );
     }
 
@@ -78,11 +78,11 @@ const menuItems = computed(() => {
                                 :href="item.href"
                                 :active="route().current(item.active)"
                             >
-                                {{ item.icon }} {{ item.label }}
+                                {{ item.label }}
                             </NavLink>
                         </template>
 
-                        <!-- Профиль (только для авторизованных) -->
+                        <!-- Профиль -->
                         <div v-if="user" class="relative">
                             <button
                                 @click="showDropdown = !showDropdown"
@@ -104,7 +104,6 @@ const menuItems = computed(() => {
                             </div>
                         </div>
 
-                        <!-- Ссылка на логин для неавторизованных -->
                         <Link v-else :href="route('login')" class="text-sm text-blue-500 hover:text-blue-700">
                             Увійти
                         </Link>

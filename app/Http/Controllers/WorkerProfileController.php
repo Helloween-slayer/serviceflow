@@ -11,6 +11,57 @@ use Illuminate\Support\Facades\Storage;
 
 class WorkerProfileController extends Controller
 {
+    /**
+     * ✅ НОВЫЙ МЕТОД: Публичный список всех исполнителей на главной странице
+     */
+    public function index(Request $request)
+    {
+        $query = WorkerProfile::with(['user'])
+            ->whereHas('user', function ($q) {
+                $q->where('role_id', 2); // Только воркеры
+            });
+
+        // Поиск по имени
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('user', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%");
+            });
+        }
+
+        // Фильтр по тегам (если есть связь)
+        if ($request->filled('tags')) {
+            $tagIds = explode(',', $request->tags);
+            $query->whereHas('user', function ($q) use ($tagIds) {
+                $q->whereHas('tags', function ($q) use ($tagIds) {
+                    $q->whereIn('tags.id', $tagIds);
+                });
+            });
+        }
+
+        // Сортировка
+        if ($request->filled('sort')) {
+            if ($request->sort === 'rating_desc') {
+                $query->orderBy('rating', 'desc');
+            } elseif ($request->sort === 'rating_asc') {
+                $query->orderBy('rating', 'asc');
+            } elseif ($request->sort === 'orders_desc') {
+                $query->orderBy('completed_orders', 'desc');
+            }
+        } else {
+            $query->orderBy('rating', 'desc');
+        }
+
+        $workers = $query->paginate(12)->withQueryString();
+        $tags = Tag::all();
+
+        return Inertia::render('Workers/Index', [
+            'workers' => $workers,
+            'tags' => $tags,
+            'filters' => $request->only(['search', 'tags', 'sort']),
+        ]);
+    }
+
     public function show($user)
     {
         $userId = (int)$user;

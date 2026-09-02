@@ -36,12 +36,42 @@ class OrderService
 
     // ========== ЗАПИТИ ==========
 
-    public static function getAvailableOrders()
+    public function getAvailableOrders(array $filters = [])
     {
-        return Order::where('status', Order::STATUS_NEW)
+        $query = Order::where('status', Order::STATUS_NEW)
             ->whereNull('worker_id')
-            ->with('tags', 'client')
-            ->paginate(10);
+            ->with(['tags', 'client']);
+
+        // ✅ Поиск по тексту
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        // ✅ Фильтр по тегам
+        if (!empty($filters['tag'])) {
+            $query->whereHas('tags', function ($q) use ($filters) {
+                $q->where('tags.id', $filters['tag']);
+            });
+        }
+
+        // ✅ Сортировка
+        if (!empty($filters['sort'])) {
+            if ($filters['sort'] === 'price_asc') {
+                $query->orderBy('price', 'asc');
+            } elseif ($filters['sort'] === 'price_desc') {
+                $query->orderBy('price', 'desc');
+            } elseif ($filters['sort'] === 'newest') {
+                $query->orderBy('created_at', 'desc');
+            }
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        return $query->paginate(10)->withQueryString();
     }
 
     public function getClientOrders(int $userId, ?string $status = null)

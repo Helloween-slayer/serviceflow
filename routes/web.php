@@ -18,10 +18,6 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-// ========== ПУБЛІЧНИЙ ПРОФІЛЬ ВОРКЕРА (доступен всем) ==========
-// Используем /workers/ (множественное число), чтобы не конфликтовать с группой /worker/
-Route::get('/workers/{user}/profile', [WorkerProfileController::class, 'show'])
-    ->name('worker.profile.show');
 
 // ========== ПУБЛІЧНІ ==========
 Route::get('/', function () {
@@ -31,6 +27,12 @@ Route::get('/', function () {
 // ========== ПУБЛІЧНІ ЗАЯВКИ (ДЛЯ ВСІХ) ==========
 Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
 Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+
+// ========== ПУБЛІЧНИЙ ПРОФІЛЬ ВОРКЕРА ==========
+Route::get('/workers', [WorkerProfileController::class, 'index'])->name('workers.index');
+Route::get('/workers/{user}/profile', [WorkerProfileController::class, 'show'])
+    ->name('worker.profile.show');
+
 
 // ========== ДАШБОРД ==========
 Route::get('/dashboard', function () {

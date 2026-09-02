@@ -28,10 +28,22 @@ class OrderController extends Controller
     /**
      * Публічний список — тільки доступні заявки (status = new, worker_id = null).
      */
-    public function index()
+    public function index(Request $request)  // ✅ Добавили $request
     {
-        $orders = $this->orderService->getAvailableOrders();
-        return Inertia::render('Orders/Index', ['orders' => $orders]);
+        // ✅ Получаем параметры фильтрации
+        $filters = $request->only(['search', 'tag', 'sort']);
+
+        // ✅ Вызываем сервис с фильтрами
+        $orders = $this->orderService->getAvailableOrders($filters);
+
+        // ✅ Получаем все теги для фильтра
+        $tags = Tag::all();
+
+        return Inertia::render('Orders/Index', [
+            'orders' => $orders,
+            'tags' => $tags,
+            'filters' => $filters,
+        ]);
     }
 
     /**
@@ -170,7 +182,8 @@ class OrderController extends Controller
      */
     public function create()
     {
-        return Inertia::render('Client/Orders/Create', ['tags' => Tag::all()]);
+        $tags = Tag::all();
+        return Inertia::render('Client/Orders/Create', ['tags' => $tags]);
     }
 
     /**
