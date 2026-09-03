@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Review;
 use App\Models\WorkerProfile;
+use App\Models\Tag;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Gate;
@@ -18,7 +19,7 @@ class WorkerProfileController extends Controller
     {
         $query = WorkerProfile::with(['user'])
             ->whereHas('user', function ($q) {
-                $q->where('role_id', 2); // Только воркеры
+                $q->where('role_id', 2);
             });
 
         // Поиск по имени
@@ -29,7 +30,7 @@ class WorkerProfileController extends Controller
             });
         }
 
-        // Фильтр по тегам (если есть связь)
+        // Фильтр по тегам
         if ($request->filled('tags')) {
             $tagIds = explode(',', $request->tags);
             $query->whereHas('user', function ($q) use ($tagIds) {
@@ -54,6 +55,24 @@ class WorkerProfileController extends Controller
 
         $workers = $query->paginate(12)->withQueryString();
         $tags = Tag::all();
+
+        // ✅ Генерируем временные URL для аватаров
+        $workers->getCollection()->transform(function ($worker) {
+            if ($worker->avatar) {
+                try {
+                    $worker->avatar_url = Storage::disk('s3')->temporaryUrl(
+                        $worker->avatar,
+                        now()->addMinutes(60) // Ссылка активна 60 минут
+                    );
+                } catch (\Exception $e) {
+                    \Log::error('Error generating temporary URL for avatar: ' . $e->getMessage());
+                    $worker->avatar_url = null;
+                }
+            } else {
+                $worker->avatar_url = null;
+            }
+            return $worker;
+        });
 
         return Inertia::render('Workers/Index', [
             'workers' => $workers,

@@ -31,6 +31,22 @@ class WorkerProfile extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if ($this->avatar) {
+            try {
+                return Storage::disk('s3')->temporaryUrl(
+                    $this->avatar,
+                    now()->addMinutes(60)
+                );
+            } catch (\Exception $e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    // Получить рейтинг в процентах
     public function getRatingPercentAttribute(): float
     {
         return $this->rating * 20;
@@ -41,9 +57,17 @@ class WorkerProfile extends Model
         return $this->hasMany(Review::class, 'worker_id', 'user_id');
     }
 
-    /**
-     * Получить имена файлов портфолио
-     */
+    public function getPortfolioUrlsAttribute(): array
+    {
+        if (empty($this->portfolio)) {
+            return [];
+        }
+
+        return array_map(function ($path) {
+            return Storage::disk('s3')->url($path);
+        }, $this->portfolio);
+    }
+
     public function getPortfolioNamesAttribute(): array
     {
         if (empty($this->portfolio)) {

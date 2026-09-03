@@ -45,17 +45,28 @@
                     v-for="worker in workers.data"
                     :key="worker.id"
                     :href="route('worker.profile.show', worker.user_id)"
-                    class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition"
+                    class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition hover:border-blue-300"
                 >
                     <div class="flex items-center gap-4 mb-3">
-                        <div class="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl font-bold">
-                            {{ worker.user?.name?.charAt(0)?.toUpperCase() || '?' }}
+                        <!-- ✅ АВАТАР -->
+                        <div class="w-16 h-16 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+                            <img
+                                v-if="worker.avatar_url"
+                                :src="worker.avatar_url"
+                                :alt="worker.user?.name"
+                                class="w-full h-full object-cover"
+                            />
+                            <span v-else>
+                                {{ worker.user?.name?.charAt(0)?.toUpperCase() || '?' }}
+                            </span>
                         </div>
                         <div>
-                            <h3 class="font-semibold">{{ worker.user?.name || 'Не указано' }}</h3>
+                            <h3 class="font-semibold text-gray-900">
+                                {{ worker.user?.name || 'Не указано' }}
+                            </h3>
                             <div class="flex items-center gap-1">
                                 <span class="text-yellow-500">⭐</span>
-                                <span>{{ worker.rating || 0 }}</span>
+                                <span class="text-sm text-gray-600">{{ worker.rating || 0 }}</span>
                             </div>
                         </div>
                     </div>
@@ -70,8 +81,12 @@
             </div>
 
             <EmptyState v-else>
-                <template #title>Исполнителей не найдено</template>
-                <template #description>Попробуйте изменить параметры поиска</template>
+                <template #title>
+                    {{ filters.search || filters.tags ? 'Исполнителей не найдено' : 'Исполнителей пока нет' }}
+                </template>
+                <template #description>
+                    {{ filters.search || filters.tags ? 'Попробуйте изменить параметры поиска' : 'Зарегистрируйтесь как исполнитель' }}
+                </template>
             </EmptyState>
 
             <Pagination v-if="workers.data.length" :pagination="workers" class="mt-6" />
